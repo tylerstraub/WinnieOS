@@ -1,0 +1,110 @@
+# WinnieOS Initial Setup Script
+# This script sets up WinnieOS for first-time installation
+
+param(
+    [switch]$SkipServiceInstall
+)
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "=== WinnieOS Setup ===" -ForegroundColor Cyan
+Write-Host ""
+
+# Get script directory and project root
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptDir
+
+Set-Location $projectRoot
+
+# Check prerequisites
+Write-Host "Checking prerequisites..." -ForegroundColor Yellow
+
+# Check Node.js
+try {
+    $nodeVersion = node --version
+    Write-Host "  [OK] Node.js: $nodeVersion" -ForegroundColor Green
+} catch {
+    Write-Error "Node.js is not installed or not in PATH. Please install Node.js from https://nodejs.org/"
+    exit 1
+}
+
+# Check npm
+try {
+    $npmVersion = npm --version
+    Write-Host "  [OK] npm: $npmVersion" -ForegroundColor Green
+} catch {
+    Write-Error "npm is not available. Please reinstall Node.js"
+    exit 1
+}
+
+# Check Git
+try {
+    $gitVersion = git --version
+    Write-Host "  [OK] Git: $gitVersion" -ForegroundColor Green
+} catch {
+    Write-Error "Git is not installed or not in PATH. Please install Git from https://git-scm.com/"
+    exit 1
+}
+
+Write-Host ""
+
+# Install npm dependencies
+Write-Host "Installing npm dependencies..." -ForegroundColor Yellow
+npm install
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Failed to install npm dependencies"
+    exit 1
+}
+Write-Host "  [OK] Dependencies installed" -ForegroundColor Green
+Write-Host ""
+
+# Create local config if it doesn't exist
+$localConfigPath = Join-Path $projectRoot "config\local.json"
+if (-not (Test-Path $localConfigPath)) {
+    Write-Host "Creating local configuration..." -ForegroundColor Yellow
+    $exampleConfigPath = Join-Path $projectRoot "config\local.json.example"
+    if (Test-Path $exampleConfigPath) {
+        Copy-Item $exampleConfigPath $localConfigPath
+        Write-Host "  [OK] Local config created from template" -ForegroundColor Green
+        Write-Host "  Note: You can edit config\local.json to customize settings" -ForegroundColor Gray
+    } else {
+        Write-Host "  [WARN] Example config not found, creating minimal config" -ForegroundColor Yellow
+        $defaultConfig = @{
+            server = @{
+                port = 3000
+                host = "localhost"
+            }
+        } | ConvertTo-Json -Depth 10
+        $defaultConfig | Out-File -FilePath $localConfigPath -Encoding UTF8
+    }
+    Write-Host ""
+}
+
+# Install Windows Service (if not skipped)
+if (-not $SkipServiceInstall) {
+    Write-Host "Installing Windows Service..." -ForegroundColor Yellow
+    Write-Host "  Note: This requires Administrator privileges" -ForegroundColor Gray
+    
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    
+    if (-not $isAdmin) {
+        Write-Host "  [WARN] Not running as Administrator. Service installation skipped." -ForegroundColor Yellow
+        Write-Host "  To install the service, run: .\scripts\install-service.ps1 install" -ForegroundColor Gray
+    } else {
+        & "$scriptDir\install-service.ps1" install
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [OK] Windows Service installed and started" -ForegroundColor Green
+        } else {
+            Write-Host "  [WARN] Service installation had issues. You can install it later with: .\scripts\install-service.ps1 install" -ForegroundColor Yellow
+        }
+    }
+    Write-Host ""
+}
+
+Write-Host "=== Setup Complete ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "Next steps:" -ForegroundColor Cyan
+Write-Host "  1. Edit config\local.json to set Chromium path if needed (script will auto-detect common paths)" -ForegroundColor Gray
+Write-Host "  2. Test the server: npm start" -ForegroundColor Gray
+Write-Host "  3. Set up Task Scheduler to run scripts\start.ps1 on startup" -ForegroundColor Gray
+Write-Host ""

@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Local configuration (not synced to repo)
+config/local.json
+
+# Logs
+logs/*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Windows
+desktop.ini
