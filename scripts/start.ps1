@@ -151,3 +151,6 @@ Start-Process -FilePath $ChromiumPath -ArgumentList @(
 Write-Host "  [OK] Browser launched" -ForegroundColor Green
 Write-Host ""
 Write-Host "=== WinnieOS Started ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "Startup complete! This window will close automatically in 5 seconds..." -ForegroundColor Cyan
+Start-Sleep -Seconds 5
