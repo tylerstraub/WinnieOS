@@ -82,28 +82,55 @@ WinnieOS/
 
 ### Prerequisites
 
-- Node.js (v24.6.0 or later)
-- npm (comes with Node.js)
-- Git (for version control)
-- PowerShell (Windows)
+**Required Software** (must be installed before running setup):
+
+1. **Node.js** (v24.6.0 or later, LTS version recommended)
+   - Download from: https://nodejs.org/
+   - Install the LTS (Long Term Support) version
+   - This also installs npm (Node Package Manager)
+   - **Important**: Restart PowerShell/terminal after installation
+
+2. **Git** (for version control and updates)
+   - Download from: https://git-scm.com/
+   - Or install via: `winget install Git.Git` (Windows 11)
+
+3. **PowerShell** (comes with Windows)
+
+4. **Chromium-based Browser** (Chrome, Edge, or Chromium)
+   - Chrome: https://www.google.com/chrome/
+   - Edge: Comes with Windows 11
+   - Chromium: https://www.chromium.org/getting-involved/download-chromium
+
+**Note**: The setup script will check for these prerequisites and provide guidance if any are missing.
 
 ### Initial Setup
 
-1. Clone the repository:
-   ```powershell
-   git clone <repository-url>
-   cd WinnieOS
-   ```
+**Step 1: Install Prerequisites**
 
-2. Run setup script:
-   ```powershell
-   .\scripts\setup.ps1
-   ```
-   This will:
-   - Check prerequisites
-   - Install npm dependencies
-   - Create `config/local.json` from template
-   - Optionally install Windows Service (requires admin)
+Before cloning, ensure you have installed:
+- Node.js (LTS version from https://nodejs.org/)
+- Git (from https://git-scm.com/ or via `winget install Git.Git`)
+
+**Step 2: Clone the Repository**
+
+```powershell
+git clone https://github.com/tylerstraub/WinnieOS.git
+cd WinnieOS
+```
+
+**Step 3: Run Setup Script**
+
+```powershell
+.\scripts\setup.ps1
+```
+
+This will:
+- ✅ Check prerequisites (Node.js, npm, Git)
+- ✅ Install npm dependencies
+- ✅ Create `config/local.json` from template
+- ✅ Optionally install Windows Service (requires admin)
+
+**Note**: If any prerequisites are missing, the setup script will provide clear instructions on what to install.
 
 3. (Optional) Edit `config/local.json` to customize:
    - Server port (default: 3000)
@@ -154,17 +181,29 @@ The production laptop will automatically pull updates on startup via `start.ps1`
 
 ### Initial Setup on Target Laptop
 
-1. Clone repository:
-   ```powershell
-   git clone <repository-url>
-   cd WinnieOS
-   ```
+**Important: Install Prerequisites First**
 
-2. Run setup (as Administrator):
-   ```powershell
-   .\scripts\setup.ps1
-   ```
-   This installs the Windows Service.
+Before proceeding, ensure Node.js and Git are installed (see Prerequisites section above).
+
+**Step 1: Clone Repository**
+
+```powershell
+git clone https://github.com/tylerstraub/WinnieOS.git
+cd WinnieOS
+```
+
+**Step 2: Run Setup**
+
+Run setup as Administrator (right-click PowerShell, "Run as Administrator"):
+```powershell
+.\scripts\setup.ps1
+```
+
+This will:
+- Check prerequisites
+- Install npm dependencies
+- Create local configuration
+- Install Windows Service (if run as Administrator)
 
 3. Configure Task Scheduler to run `scripts\start.ps1` on startup:
    - Open Task Scheduler

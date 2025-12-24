@@ -24,7 +24,15 @@ try {
     $nodeVersion = node --version
     Write-Host "  [OK] Node.js: $nodeVersion" -ForegroundColor Green
 } catch {
-    Write-Error "Node.js is not installed or not in PATH. Please install Node.js from https://nodejs.org/"
+    Write-Host ""
+    Write-Host "ERROR: Node.js is not installed or not in PATH" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Please install Node.js before continuing:" -ForegroundColor Yellow
+    Write-Host "  1. Download Node.js from: https://nodejs.org/" -ForegroundColor Cyan
+    Write-Host "  2. Install the LTS (Long Term Support) version" -ForegroundColor Cyan
+    Write-Host "  3. Restart PowerShell after installation" -ForegroundColor Cyan
+    Write-Host "  4. Run this setup script again" -ForegroundColor Cyan
+    Write-Host ""
     exit 1
 }
 
@@ -33,7 +41,11 @@ try {
     $npmVersion = npm --version
     Write-Host "  [OK] npm: $npmVersion" -ForegroundColor Green
 } catch {
-    Write-Error "npm is not available. Please reinstall Node.js"
+    Write-Host ""
+    Write-Host "ERROR: npm is not available" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "npm should come with Node.js. Please reinstall Node.js from https://nodejs.org/" -ForegroundColor Yellow
+    Write-Host ""
     exit 1
 }
 
@@ -42,7 +54,15 @@ try {
     $gitVersion = git --version
     Write-Host "  [OK] Git: $gitVersion" -ForegroundColor Green
 } catch {
-    Write-Error "Git is not installed or not in PATH. Please install Git from https://git-scm.com/"
+    Write-Host ""
+    Write-Host "ERROR: Git is not installed or not in PATH" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Please install Git before continuing:" -ForegroundColor Yellow
+    Write-Host "  1. Download Git from: https://git-scm.com/" -ForegroundColor Cyan
+    Write-Host "  2. Or install via: winget install Git.Git (Windows 11)" -ForegroundColor Cyan
+    Write-Host "  3. Restart PowerShell after installation" -ForegroundColor Cyan
+    Write-Host "  4. Run this setup script again" -ForegroundColor Cyan
+    Write-Host ""
     exit 1
 }
 
