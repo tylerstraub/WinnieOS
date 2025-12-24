@@ -89,7 +89,8 @@ try {
     if ($events) {
         Write-Host "   Found recent Task Scheduler events:" -ForegroundColor Gray
         $events | Select-Object -First 5 | ForEach-Object {
-            Write-Host "     [$($_.TimeCreated)] $($_.Id): $($_.Message -replace "`n", " " -replace "`r", "")" -ForegroundColor Gray
+            $message = $_.Message -replace "`r`n", " " -replace "`r", " " -replace "`n", " "
+            Write-Host "     [$($_.TimeCreated)] $($_.Id): $message" -ForegroundColor Gray
         }
     } else {
         Write-Host "   [INFO] No recent Task Scheduler events found for WinnieOS" -ForegroundColor Gray
