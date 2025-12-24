@@ -57,10 +57,9 @@ Write-Host "  Script: $startScriptPath" -ForegroundColor Gray
 Write-Host ""
 
 # Create the action (run PowerShell script)
-# WindowStyle Normal shows the window so dads can see startup progress
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Normal -NoExit -File `"$startScriptPath`"" `
+    -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$startScriptPath`"" `
     -WorkingDirectory $projectRoot
 
 # Create the trigger (at logon - runs after user logs in, allows GUI access)
