@@ -57,13 +57,16 @@ Write-Host "  Script: $startScriptPath" -ForegroundColor Gray
 Write-Host ""
 
 # Create the action (run PowerShell script)
+# Redirect output to log file for debugging, keep window hidden
+$logPath = Join-Path $projectRoot "logs\startup.log"
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$startScriptPath`"" `
+    -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$startScriptPath`" *> `"$logPath`"" `
     -WorkingDirectory $projectRoot
 
-# Create the trigger (at logon - runs after user logs in, allows GUI access)
+# Create the trigger (at logon with delay - allows desktop to fully initialize)
 $trigger = New-ScheduledTaskTrigger -AtLogOn
+$trigger.Delay = "PT30S"  # 30 second delay after logon
 
 # Create settings
 $settings = New-ScheduledTaskSettingsSet `
