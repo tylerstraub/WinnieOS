@@ -205,14 +205,26 @@ This will:
 - Create local configuration
 - Install Windows Service (if run as Administrator)
 
-3. Configure Task Scheduler to run `scripts\start.ps1` on startup:
+**Step 3: Configure Task Scheduler (Automatic Startup)**
+
+Option A - Automated Setup (Recommended):
+```powershell
+# Run PowerShell as Administrator, then:
+cd C:\Users\Winnie\WinnieOS
+.\scripts\setup-task-scheduler.ps1
+```
+
+Option B - Manual Setup:
    - Open Task Scheduler
    - Create Basic Task
+   - Name: "WinnieOS Startup"
    - Trigger: "When the computer starts"
    - Action: Start a program
    - Program: `powershell.exe`
-   - Arguments: `-ExecutionPolicy Bypass -File "C:\path\to\WinnieOS\scripts\start.ps1"`
-   - Run with highest privileges: Yes
+   - Arguments: `-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File "C:\Users\Winnie\WinnieOS\scripts\start.ps1"`
+   - Start in: `C:\Users\Winnie\WinnieOS`
+   - Check "Run with highest privileges"
+   - Finish
 
 ### Startup Sequence
 
@@ -328,6 +340,16 @@ Remote restart script. Stops browser and service, then runs start.ps1.
 ```powershell
 .\scripts\restart.ps1
 .\scripts\restart.ps1 -ChromiumPath "C:\Path\To\Chrome.exe"
+```
+
+#### `scripts/setup-task-scheduler.ps1`
+
+Creates a Windows Task Scheduler task to run WinnieOS on system startup. Requires Administrator privileges.
+
+**Usage:**
+```powershell
+.\scripts\setup-task-scheduler.ps1           # Create the task
+.\scripts\setup-task-scheduler.ps1 -Remove   # Remove the task
 ```
 
 #### `scripts/install-service.ps1`
