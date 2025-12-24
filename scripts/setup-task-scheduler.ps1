@@ -62,8 +62,8 @@ $action = New-ScheduledTaskAction `
     -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$startScriptPath`"" `
     -WorkingDirectory $projectRoot
 
-# Create the trigger (on system startup)
-$trigger = New-ScheduledTaskTrigger -AtStartup
+# Create the trigger (at logon - runs after user logs in, allows GUI access)
+$trigger = New-ScheduledTaskTrigger -AtLogOn
 
 # Create settings
 $settings = New-ScheduledTaskSettingsSet `
@@ -74,7 +74,7 @@ $settings = New-ScheduledTaskSettingsSet `
     -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1)
 
-# Create the principal (run with highest privileges)
+# Create the principal (run as logged-in user with highest privileges, Interactive allows GUI)
 $principal = New-ScheduledTaskPrincipal `
     -UserId "$env:USERDOMAIN\$env:USERNAME" `
     -LogonType Interactive `
@@ -95,7 +95,7 @@ try {
     Write-Host ""
     Write-Host "Task Configuration:" -ForegroundColor Cyan
     Write-Host "  - Name: $taskName" -ForegroundColor Gray
-    Write-Host "  - Trigger: At system startup" -ForegroundColor Gray
+    Write-Host "  - Trigger: At user logon (runs after login to allow browser launch)" -ForegroundColor Gray
     Write-Host "  - Runs: $startScriptPath" -ForegroundColor Gray
     Write-Host "  - User: $env:USERDOMAIN\$env:USERNAME" -ForegroundColor Gray
     Write-Host "  - Run Level: Highest (Administrator)" -ForegroundColor Gray
