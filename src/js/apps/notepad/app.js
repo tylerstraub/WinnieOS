@@ -319,11 +319,42 @@ export default {
             try { emojiStripInner.scrollLeft = 0; } catch (_) { /* ignore */ }
         });
 
+        // Safe hook: recover focus if child tries to type while editor is unfocused
+        // This handles the edge case where toddlers tap around and lose focus
+        const onGlobalKeyDown = (e) => {
+            // Only handle printable characters (not special keys like Escape, Tab, etc.)
+            // Check if key is a single character that would produce text
+            const key = e.key;
+            const isPrintable = key && key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+            
+            // Don't interfere if user is actively interacting with a button or input
+            const activeEl = document.activeElement;
+            const isButtonOrInput = activeEl && (
+                activeEl.tagName === 'BUTTON' ||
+                activeEl.tagName === 'INPUT' ||
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.hasAttribute('contenteditable')
+            );
+            
+            // If it's a printable key and editor doesn't have focus, recover focus
+            if (isPrintable && !isButtonOrInput && activeEl !== editor) {
+                // Check if editor is still in the DOM (app hasn't unmounted)
+                if (editor && editor.isConnected) {
+                    editor.focus({ preventScroll: true });
+                    // Apply current color so typing uses the right color
+                    applyTypingColor(editor, currentColor);
+                    // The key event will continue to the editor now that it's focused
+                }
+            }
+        };
+
         // Wire events
         editor.addEventListener('input', onInput);
         editor.addEventListener('paste', onPaste);
         paper.addEventListener('pointerdown', onPointerDown);
         trashBtn.addEventListener('click', onTrash);
+        // Global keyboard listener for focus recovery
+        document.addEventListener('keydown', onGlobalKeyDown, true); // Use capture phase
 
         // Cleanup
         return function cleanup() {
@@ -332,6 +363,7 @@ export default {
             editor.removeEventListener('paste', onPaste);
             paper.removeEventListener('pointerdown', onPointerDown);
             trashBtn.removeEventListener('click', onTrash);
+            document.removeEventListener('keydown', onGlobalKeyDown, true);
         };
     },
 
