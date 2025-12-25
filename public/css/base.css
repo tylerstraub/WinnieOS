@@ -75,11 +75,10 @@ body {
     overflow: hidden;
     margin: 0;
     padding: 0;
-    position: relative;
-    background: var(--color-primary); /* Match canvas gradient start color for seamless appearance */
     display: flex;
     justify-content: center;
     align-items: center;
+    background: var(--color-primary);
 }
 
 /* ============================================

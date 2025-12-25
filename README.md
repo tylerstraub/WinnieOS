@@ -78,9 +78,8 @@ WinnieOS/
 **Reference Resolution: 1280x800 (16:10 aspect ratio)**
 - All UI elements are designed and sized for this resolution
 - Canvas is always 1280x800px (never changes)
-- JavaScript applies CSS transform scale to fit viewport
-- At reference resolution: scale = 1.0, fills perfectly
-- On other resolutions: scales proportionally, maintains aspect ratio
+- At exact reference resolution (1280x800): canvas fills viewport directly using `position: fixed` with `100%` width/height
+- On other resolutions: canvas scales proportionally using CSS `transform: scale()` maintaining aspect ratio
 
 **Design Tokens (CSS Custom Properties)**
 - Typography scale: `--font-size-xs` through `--font-size-6xl`
@@ -131,7 +130,7 @@ window.WinnieOS = {
 ```
 
 **Core Systems (`js/core/`):**
-- `viewport.js` - Viewport scaling system (calculates scale, applies transform)
+- `viewport.js` - Simple viewport scaling: fills directly at 1280x800, scales proportionally on other resolutions
 - `kiosk.js` - Kiosk mode protections (blocks navigation, prevents interactions)
 - `index.js` - Core initialization (runs on DOM ready)
 

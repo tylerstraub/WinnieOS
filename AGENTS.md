@@ -40,7 +40,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `public/css/components/` - Individual component CSS files (as features are added)
 
 **JavaScript (Modular Modules):**
-- `public/js/core/viewport.js` - Viewport scaling system
+- `public/js/core/viewport.js` - Simple viewport scaling (fills directly at 1280x800, scales on other resolutions)
 - `public/js/core/kiosk.js` - Kiosk mode protections
 - `public/js/core/index.js` - Core initialization
 - `public/js/components/index.js` - Component registry namespace
@@ -60,9 +60,8 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 - Canvas (`#winnieos-canvas`) is ALWAYS 1280x800px (never changes)
 - All UI elements use px units (designed for 1280x800)
-- JavaScript applies CSS transform scale to fit viewport
-- At reference resolution: scale = 1.0, fills perfectly
-- On other resolutions: scales proportionally, maintains aspect ratio
+- At exact reference resolution (1280x800): canvas fills viewport directly using `position: fixed` with `100%` width/height
+- On other resolutions: canvas scales proportionally using CSS `transform: scale()` maintaining aspect ratio
 
 **DO NOT:**
 - Use viewport units (vw/vh) inside canvas
