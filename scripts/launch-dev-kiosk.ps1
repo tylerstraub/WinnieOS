@@ -74,9 +74,7 @@ Start-Process -FilePath $ChromiumPath -ArgumentList @(
     "--disable-session-crashed-bubble",
     "--disable-restore-session-state",
     "--disable-translate",
-    "--overscroll-history-navigation=0",
-    "--disable-web-security",
-    "--disable-features=IsolateOrigins,site-per-process"
+    "--overscroll-history-navigation=0"
 )
 
 Write-Host "  [OK] Browser launched" -ForegroundColor Green
