@@ -15,10 +15,10 @@
         /* ============================================
            WINNIEOS FOUNDATION PRINCIPLES
            
-           REFERENCE RESOLUTION: 1280x800 (16:10 aspect ratio)
-           - This is the absolute reference point for all design decisions
-           - All UI elements are designed and sized for this resolution
-           - The entire application scales from this single reference point
+           DEFAULT REFERENCE RESOLUTION: 1280x800 (16:10 aspect ratio)
+           - All UI is designed in a single "virtual computer" coordinate system (reference resolution)
+           - By default that coordinate system is 1280x800, but it may be changed via WinnieOS.Display
+           - The entire application scales uniformly from the active reference resolution (no responsive reflow)
            
            DOCUMENTATION:
            - See README.md for complete principles and architecture
@@ -37,6 +37,7 @@
 
     <!-- JavaScript: Core Systems -->
     <!-- Load order matters: core modules first, then initialization -->
+    <script src="js/core/display.js"></script>
     <script src="js/core/viewport.js"></script>
     <script src="js/core/kiosk.js"></script>
     <script src="js/core/index.js"></script>

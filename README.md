@@ -77,19 +77,29 @@ WinnieOS/
 
 **Reference Resolution: 1280x800 (16:10 aspect ratio)**
 - All UI elements are designed and sized for this resolution
-- Canvas is always 1280x800px (never changes)
+- Default reference resolution is 1280x800, but the reference may be changed via `WinnieOS.Display`
 - The app is rendered by applying a single uniform transform scale (no responsive reflow)
 - Canvas is centered with letterboxing/pillarboxing on non-16:10 viewports
 
 **Viewport Scaling Convention (Canonical)**
-- Canvas internal coordinate system is always **1280×800**
-- Scale is computed as: \( scale = \min(\frac{vw}{1280}, \frac{vh}{800}) \)
+- Canvas internal coordinate system is always **REF_WIDTH×REF_HEIGHT** (the active reference resolution)
+- Scale is computed as: \( scale = \min(\frac{vw}{REF\_WIDTH}, \frac{vh}{REF\_HEIGHT}) \)
 - The scaled canvas is centered by setting pixel `left/top` offsets
-- At 1280×800: **scale = 1** and offsets are **0**, so the reference device “locks” perfectly without special-casing
+- When viewport matches the active reference size: **scale = 1** and offsets are **0**, so it “locks” perfectly without special-casing
 
 **Debugging**
 - Current scale is exposed as `#winnieos-canvas[data-scale]`
 - The same value is also available as CSS variable `--viewport-scale` on `:root`
+
+**Display Module (Reference Resolution Owner)**
+- `WinnieOS.Display` owns the reference resolution and persists it in `localStorage`
+- It writes the reference into CSS variables:
+  - `--ref-width`, `--ref-height`, `--ref-aspect-ratio`
+- It emits a `winnieos:displaychange` event so systems can react (Viewport listens to this)
+- Future “change WinnieOS resolution” UI should call:
+  - `WinnieOS.Display.setReferenceSize({ width, height })`
+  - For temporary/dev testing without saving: `WinnieOS.Display.setReferenceSize({ width, height, persist: false })`
+  - To return to defaults: `WinnieOS.Display.resetReferenceSize()`
 
 **Design Tokens (CSS Custom Properties)**
 - Typography scale: `--font-size-xs` through `--font-size-6xl`
@@ -140,7 +150,8 @@ window.WinnieOS = {
 ```
 
 **Core Systems (`js/core/`):**
-- `viewport.js` - Simple viewport scaling: fills directly at 1280x800, scales proportionally on other resolutions
+- `display.js` - Reference resolution owner (virtual computer resolution), persists and broadcasts changes
+- `viewport.js` - Scales/centers the reference canvas into the real device viewport (letterbox/pillarbox)
 - `kiosk.js` - Kiosk mode protections (blocks navigation, prevents interactions)
 - `index.js` - Core initialization (runs on DOM ready)
 
@@ -153,7 +164,7 @@ window.WinnieOS = {
 - Future: Shared helper functions (DOM helpers, event helpers, etc.)
 
 **Loading Order:**
-1. Core modules (`viewport.js`, `kiosk.js`)
+1. Core modules (`display.js`, `viewport.js`, `kiosk.js`)
 2. Core initialization (`core/index.js`)
 3. Utilities (`utils/index.js`)
 4. Components (`components/index.js`)

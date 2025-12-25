@@ -14,6 +14,15 @@
      * Initialize all core systems
      */
     function init() {
+        // Initialize Display (reference resolution owner) first so CSS vars are set
+        if (WinnieOS.Display) {
+            WinnieOS.Display.init();
+        } else {
+            // Viewport can fall back to CSS tokens, but this should normally never happen
+            // because `public/index.html` loads `js/core/display.js` before `viewport.js`.
+            console.warn('WinnieOS: Display module failed to load; falling back to CSS reference tokens');
+        }
+
         // Initialize viewport scaling
         if (WinnieOS.Viewport) {
             WinnieOS.Viewport.init();

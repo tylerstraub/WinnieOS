@@ -1,9 +1,15 @@
 /**
  * WinnieOS Viewport Scaling System
  * 
- * Simple scaling: Canvas is always 1280x800px, scaled to fit viewport.
- * At reference resolution (1280x800), canvas fills viewport directly.
- * On other resolutions, canvas scales proportionally maintaining aspect ratio.
+ * Fits the current reference-resolution canvas into the real device viewport.
+ *
+ * Canonical rule:
+ * - The canvas keeps a stable internal coordinate system (reference resolution).
+ * - We apply a uniform scale-to-fit transform (letterbox/pillarbox as needed).
+ *
+ * Reference resolution source of truth:
+ * - Prefer WinnieOS.Display.getReferenceSize() if available.
+ * - Fallback to CSS variables --ref-width / --ref-height.
  */
 
 (function() {
@@ -12,9 +18,6 @@
     const WinnieOS = window.WinnieOS = window.WinnieOS || {};
 
     WinnieOS.Viewport = (function() {
-        const REF_WIDTH = 1280;
-        const REF_HEIGHT = 800;
-        
         let canvas = null;
         let rafId = null;
 
@@ -23,6 +26,24 @@
                 canvas = document.getElementById('winnieos-canvas');
             }
             return canvas;
+        }
+
+        function getReferenceSize() {
+            if (WinnieOS.Display && typeof WinnieOS.Display.getReferenceSize === 'function') {
+                const ref = WinnieOS.Display.getReferenceSize();
+                if (ref && Number.isFinite(ref.width) && Number.isFinite(ref.height) && ref.width > 0 && ref.height > 0) {
+                    return { width: ref.width, height: ref.height };
+                }
+            }
+
+            const cs = window.getComputedStyle(document.documentElement);
+            const w = parseInt(cs.getPropertyValue('--ref-width'), 10);
+            const h = parseInt(cs.getPropertyValue('--ref-height'), 10);
+            if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+                return { width: w, height: h };
+            }
+
+            return { width: 1280, height: 800 };
         }
 
         function getViewportSize() {
@@ -49,12 +70,16 @@
             const canvasElement = getCanvas();
             if (!canvasElement) return;
 
+            const ref = getReferenceSize();
+            const REF_WIDTH = ref.width;
+            const REF_HEIGHT = ref.height;
+
             const vp = getViewportSize();
             const vw = vp.width;
             const vh = vp.height;
 
             // Single rule everywhere: scale-to-fit while preserving aspect ratio.
-            // Reference point "locks" naturally when vw=1280 and vh=800 => scale=1 and offsets=0.
+            // The reference "locks" naturally at scale=1 when viewport exactly matches the current reference size.
             const scale = Math.min(vw / REF_WIDTH, vh / REF_HEIGHT);
             const scaledWidth = REF_WIDTH * scale;
             const scaledHeight = REF_HEIGHT * scale;
@@ -62,7 +87,7 @@
             const left = vp.offsetLeft + (vw - scaledWidth) / 2;
             const top = vp.offsetTop + (vh - scaledHeight) / 2;
 
-            // Keep the internal coordinate system stable forever: always 1280x800.
+            // Keep the internal coordinate system stable: always REF_WIDTH x REF_HEIGHT (the active reference size).
             canvasElement.style.position = 'fixed';
             canvasElement.style.width = REF_WIDTH + 'px';
             canvasElement.style.height = REF_HEIGHT + 'px';
@@ -92,6 +117,7 @@
 
                 scheduleUpdate();
                 window.addEventListener('resize', scheduleUpdate);
+                document.addEventListener('winnieos:displaychange', scheduleUpdate);
 
                 // VisualViewport can change via pinch-zoom / virtual keyboard on some devices.
                 if (window.visualViewport) {
@@ -106,7 +132,11 @@
             },
             
             getReferenceSize: function() {
-                return { width: REF_WIDTH, height: REF_HEIGHT };
+                return getReferenceSize();
+            },
+
+            refresh: function() {
+                scheduleUpdate();
             }
         };
     })();
