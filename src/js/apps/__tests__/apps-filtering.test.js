@@ -153,7 +153,7 @@ describe('Apps registry filtering by config', () => {
         expect(allApps.length).toBeGreaterThan(0);
     });
 
-    it('should return all apps when config load fails (backward compatible)', async () => {
+    it('should default to colors-only when config load fails', async () => {
         // Mock config load error
         mockConfigLoadError = new Error('Failed to load config');
         
@@ -162,10 +162,8 @@ describe('Apps registry filtering by config', () => {
             await Apps.refreshConfig();
         }
         
-        const allApps = Apps.list();
-        
-        // Should return all apps (backward compatible)
-        expect(allApps.length).toBeGreaterThan(0);
+        const apps = Apps.list();
+        expect(apps.map(a => a.id)).toEqual(['colors']);
     });
 
     it('should filter apps correctly via Apps.get() when config is loaded', async () => {

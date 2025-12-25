@@ -99,7 +99,7 @@ export const DesktopScreen = (function() {
                     await apps.refreshConfig();
                 } catch (err) {
                     // Config load failed - log warning but continue (backward compatible)
-                    console.warn('DesktopScreen: Failed to load config, showing all apps', err);
+                    console.warn('DesktopScreen: Failed to load config, using safe defaults', err);
                 }
             }
 

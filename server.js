@@ -67,6 +67,50 @@ app.get('/winnieos-config.json', (req, res) => {
   });
 });
 
+// Debug endpoint (safe for local/offline use) to diagnose "wrong dist" / "wrong config" issues in production.
+// This helps confirm which config the running server loaded and which dist asset it is serving.
+app.get('/winnieos-debug.json', (req, res) => {
+  const remote = req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : '';
+  const isLocal =
+    remote === '127.0.0.1' ||
+    remote === '::1' ||
+    remote === '::ffff:127.0.0.1';
+  if (!isLocal) {
+    res.status(403).json({ error: 'forbidden' });
+    return;
+  }
+
+  const assetsDir = path.join(distPath, 'assets');
+  let assetFiles = [];
+  try {
+    if (fs.existsSync(assetsDir)) {
+      assetFiles = fs.readdirSync(assetsDir).filter((f) => f.endsWith('.js') || f.endsWith('.css'));
+    }
+  } catch (_) {
+    assetFiles = [];
+  }
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({
+    server: {
+      pid: process.pid,
+      node: process.version,
+      cwd: process.cwd(),
+      dirname: __dirname,
+      distPath
+    },
+    config: {
+      server: config.server,
+      display: config.display,
+      apps: config.apps
+    },
+    dist: {
+      assets: assetFiles
+    }
+  });
+});
+
 app.use(express.static(distPath));
 
 // Fallback to index.html for SPA routing (if needed in future)

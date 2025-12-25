@@ -58,12 +58,18 @@ async function loadEnabledAppIds() {
             const enabledArray = config.apps.enabled.map(id => String(id).trim()).filter(Boolean);
             enabledAppIds = new Set(enabledArray);
         } else {
-            // No config or invalid config - enable all apps (backward compatible)
-            enabledAppIds = new Set(appsById.keys());
+            if (config === null) {
+                // Config unavailable (e.g., server not ready yet). Be conservative:
+                // default to only 'colors' rather than exposing every app.
+                enabledAppIds = new Set(['colors']);
+            } else {
+                // Config object present but doesn't define apps.enabled (older server / backward compat)
+                enabledAppIds = new Set(appsById.keys());
+            }
         }
     } catch (err) {
-        console.warn('WinnieOS.Apps: failed to load config, enabling all apps', err);
-        enabledAppIds = new Set(appsById.keys());
+        console.warn('WinnieOS.Apps: failed to load config, defaulting to colors only', err);
+        enabledAppIds = new Set(['colors']);
     }
     
     return enabledAppIds;

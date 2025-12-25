@@ -4,12 +4,47 @@
 param(
     [string]$ChromiumPath = "",
     [string]$Url = "http://localhost:3000",
-    [switch]$SkipBuild = $false
+    [switch]$SkipBuild = $false,
+    [switch]$NoElevate = $false,
+    [switch]$ContinueWithoutServiceRestart = $false
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "=== Starting WinnieOS ===" -ForegroundColor Cyan
+
+function Test-IsAdmin {
+    try {
+        $currentIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($currentIdentity)
+        return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    } catch {
+        return $false
+    }
+}
+
+function Relaunch-Elevated {
+    param(
+        [string]$ScriptPath,
+        [hashtable]$BoundParams
+    )
+
+    # Build argument list from bound parameters (preserves user intent)
+    $args = @("-ExecutionPolicy", "Bypass", "-File", $ScriptPath)
+    foreach ($key in $BoundParams.Keys) {
+        $val = $BoundParams[$key]
+        if ($val -is [System.Management.Automation.SwitchParameter]) {
+            if ($val.IsPresent) { $args += "-$key" }
+        } elseif ($null -ne $val -and "$val" -ne "") {
+            $args += "-$key"
+            $args += "$val"
+        }
+    }
+
+    Write-Host "Re-launching with Administrator privileges (UAC prompt)..." -ForegroundColor Yellow
+    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList $args | Out-Null
+    exit 0
+}
 
 # Get script directory and project root
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -129,9 +164,20 @@ if ($service) {
             Start-Sleep -Seconds 3
             Write-Host "  [OK] Service restarted successfully" -ForegroundColor Green
         } catch {
-            Write-Warning "  Could not restart service (may require Administrator privileges): $_"
-            Write-Host "  [INFO] Service is already running, continuing with existing process..." -ForegroundColor Yellow
-            Write-Host "  Note: Code changes will take effect after next service restart or system reboot" -ForegroundColor Gray
+            Write-Warning "  Could not restart service: $_"
+
+            # If we aren't admin, auto-elevate so we don't silently keep running the old server.
+            if (-not $NoElevate -and -not (Test-IsAdmin)) {
+                Relaunch-Elevated -ScriptPath (Join-Path $scriptDir "start.ps1") -BoundParams $PSBoundParameters
+            }
+
+            if ($ContinueWithoutServiceRestart) {
+                Write-Host "  [WARN] Continuing without restarting the service (-ContinueWithoutServiceRestart)." -ForegroundColor Yellow
+                Write-Host "  NOTE: Code/config changes will NOT take effect until the service restarts." -ForegroundColor Yellow
+            } else {
+                Write-Error "Service restart failed. Re-run from an elevated shell or allow UAC prompt (default behavior)."
+                exit 1
+            }
         }
     } else {
         Write-Host "  Starting service..." -ForegroundColor Yellow
@@ -140,7 +186,18 @@ if ($service) {
             Start-Sleep -Seconds 2
             Write-Host "  [OK] Service started" -ForegroundColor Green
         } catch {
-            Write-Warning "  Could not start service (may require Administrator privileges): $_"
+            Write-Warning "  Could not start service: $_"
+
+            if (-not $NoElevate -and -not (Test-IsAdmin)) {
+                Relaunch-Elevated -ScriptPath (Join-Path $scriptDir "start.ps1") -BoundParams $PSBoundParameters
+            }
+
+            if ($ContinueWithoutServiceRestart) {
+                Write-Host "  [WARN] Continuing without starting the service (-ContinueWithoutServiceRestart)." -ForegroundColor Yellow
+            } else {
+                Write-Error "Service start failed. Re-run from an elevated shell or allow UAC prompt (default behavior)."
+                exit 1
+            }
         }
     }
     
