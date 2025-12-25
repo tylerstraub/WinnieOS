@@ -57,22 +57,31 @@
             const viewportHeight = window.innerHeight;
             
             // Check if we're at or very close to reference resolution
-            // Use small tolerance (2px) to account for browser chrome/scrollbars
-            const isReferenceResolution = Math.abs(viewportWidth - REF_WIDTH) <= 2 && 
-                                         Math.abs(viewportHeight - REF_HEIGHT) <= 2;
+            // Use tolerance (10px) to account for browser chrome, scrollbars, and rounding
+            // This ensures native resolution devices fill properly even with browser UI
+            const isReferenceResolution = Math.abs(viewportWidth - REF_WIDTH) <= 10 && 
+                                         Math.abs(viewportHeight - REF_HEIGHT) <= 10;
             
             if (isReferenceResolution) {
                 // At reference resolution: fill viewport directly, no transform needed
+                // Use exact pixel values from window.innerWidth/Height (not vw/vh) 
+                // to avoid scrollbar width issues - these exclude browser chrome
                 canvasElement.style.transform = 'none';
                 canvasElement.style.position = 'fixed';
                 canvasElement.style.top = '0';
                 canvasElement.style.left = '0';
-                canvasElement.style.width = '100vw';
-                canvasElement.style.height = '100vh';
+                canvasElement.style.width = viewportWidth + 'px';
+                canvasElement.style.height = viewportHeight + 'px';
                 canvasElement.style.margin = '0';
+                canvasElement.style.padding = '0';
+                canvasElement.style.border = 'none';
+                canvasElement.style.boxSizing = 'border-box';
+                canvasElement.style.outline = 'none';
                 document.body.style.display = 'block';
                 document.body.style.justifyContent = 'normal';
                 document.body.style.alignItems = 'normal';
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
                 canvasElement.dataset.scale = '1.0000';
             } else {
                 // For other resolutions: use flexbox centering and scale transform
