@@ -1,33 +1,18 @@
-import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 
-// Load configuration for dev server + frontend runtime defaults
-let config = {
-  server: { port: 3000, host: 'localhost' },
-  display: { reference: { width: 1280, height: 800 } },
-  apps: { enabled: [] }
-};
-try {
-  const defaultConfig = JSON.parse(readFileSync(resolve(__dirname, 'config/default.json'), 'utf-8'));
-  let localConfig = {};
-  try {
-    const localConfigPath = resolve(__dirname, 'config/local.json');
-    localConfig = JSON.parse(readFileSync(localConfigPath, 'utf-8'));
-  } catch {
-    // Local config doesn't exist, use defaults
-  }
-  config = {
-    server: { ...defaultConfig.server, ...(localConfig.server || {}) },
-    display: { ...defaultConfig.display, ...(localConfig.display || {}) },
-    apps: { ...defaultConfig.apps, ...(localConfig.apps || {}) }
-  };
-} catch {
-  // Use defaults if config files don't exist
-}
+// Load configuration using shared config loader
+// Uses same loader as server.js for consistency
+const { loadConfig } = require('./lib/config-loader');
+const config = loadConfig(__dirname, {
+  createDefaultIfMissing: true,
+  verbose: false // Vite handles its own logging
+});
 
 export default {
   root: '.',

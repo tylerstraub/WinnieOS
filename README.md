@@ -66,6 +66,9 @@ WinnieOS/
 │   ├── default.json      # Default configuration (committed)
 │   ├── local.json.example # Template for local config (committed)
 │   └── local.json        # Local overrides (gitignored)
+├── lib/                  # Shared library modules
+│   ├── config-loader.js  # Configuration loader (used by server.js and vite.config.js)
+│   └── __tests__/        # Library tests
 ├── scripts/
 │   ├── install-service.js # Node.js script for Windows Service install/uninstall
 │   ├── install-service.ps1 # PowerShell wrapper for service installation
@@ -79,7 +82,7 @@ WinnieOS/
 ├── logs/                 # Application logs (gitignored)
 │   └── winnieos.log
 ├── server.js             # Express web server (serves dist/)
-├── vite.config.js        # Vite configuration
+├── vite.config.js        # Vite configuration (uses shared config loader)
 ├── vitest.config.js      # Vitest test configuration
 ├── package.json          # Node.js dependencies and scripts
 ├── README.md             # This file
@@ -231,6 +234,7 @@ window.WinnieOS = {
 
 - **`server.js`**: Production Express.js static file server
   - Serves files from `dist/` directory (Vite build output)
+  - Uses shared config loader (`lib/config-loader.js`) for configuration
   - Configurable port (default: 3000)
   - File-based logging via Winston
   - Graceful shutdown handling
@@ -238,6 +242,7 @@ window.WinnieOS = {
 
 - **Vite Dev Server**: Development server with hot module replacement (HMR)
   - Started via `npm run dev`
+  - Uses shared config loader (`lib/config-loader.js`) for consistency with production
   - Automatic browser reloading on file changes
   - CSS changes inject instantly (no page reload)
   - Fast ES module loading and HMR
@@ -246,9 +251,14 @@ window.WinnieOS = {
 
 #### Configuration System
 
-- **`config/default.json`**: Default settings (committed to repo)
-- **`config/local.json`**: Local overrides (gitignored, not synced)
-- Configuration is merged: local overrides default values
+- **`config/default.json`**: Default settings (committed to repo, source of truth)
+- **`config/local.json`**: Local overrides (gitignored, not synced, optional)
+- **`lib/config-loader.js`**: Shared configuration loader module (used by both `server.js` and `vite.config.js`)
+- Configuration loading:
+  - `default.json` is required and auto-created from fallback defaults if missing
+  - `local.json` is optional and not auto-created (use `config/local.json.example` template during setup)
+  - Deep merging: local config overrides default values (nested objects are properly merged)
+  - Both `server.js` and `vite.config.js` use the same loader for consistency
 - Configurable settings:
   - Server port/host (default: 3000/localhost)
   - Logging level (default: info)
@@ -860,16 +870,20 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - **Static assets**: `public/assets/` directory (images, fonts - copied to dist/)
 - **Build output**: `dist/` directory (committed, served by Express)
 - **Server code**: `server.js` (keep it simple, serves `dist/`)
+- **Shared libraries**: `lib/` directory (e.g., `config-loader.js`)
 - **Configuration**: `config/` directory
 - **Scripts**: `scripts/` directory
 - **Logs**: `logs/` directory (gitignored)
 
 ### Configuration Management
 
-- **Default settings**: `config/default.json` (committed)
-- **Local overrides**: `config/local.json` (gitignored)
+- **Default settings**: `config/default.json` (committed, source of truth)
+- **Local overrides**: `config/local.json` (gitignored, optional)
+- **Shared loader**: `lib/config-loader.js` handles loading and merging (used by server and Vite)
 - Never commit `config/local.json`
 - Always provide defaults in `config/default.json`
+- Config loader auto-creates `default.json` from fallback defaults if missing
+- Config loader uses deep merging to properly combine nested objects
 
 ### Git Workflow
 

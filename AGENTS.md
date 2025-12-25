@@ -25,8 +25,9 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `server.js` - Express web server (production, serves `dist/`)
 - `vite.config.js` - Vite configuration (dev server, build settings)
 - `vitest.config.js` - Vitest test configuration
-- `config/default.json` - Default configuration (committed)
-- `config/local.json` - Local overrides (gitignored, not synced)
+- `lib/config-loader.js` - Shared configuration loader (used by server.js and vite.config.js)
+- `config/default.json` - Default configuration (committed, source of truth)
+- `config/local.json` - Local overrides (gitignored, not synced, optional)
 - `scripts/` - PowerShell and Node.js scripts for setup/management
 - `logs/winnieos.log` - Application logs (gitignored)
 
@@ -155,7 +156,10 @@ window.WinnieOS = {
 
 ## Configuration System
 
-- Configuration merges: `local.json` overrides `default.json`
+- **Shared loader**: `lib/config-loader.js` handles all config loading (used by both `server.js` and `vite.config.js`)
+- **Configuration merges**: `local.json` overrides `default.json` (deep merge for nested objects)
+- **Default config**: `config/default.json` is required and auto-created from fallback defaults if missing
+- **Local config**: `config/local.json` is optional and not auto-created (use template during setup)
 - Default port: 3000
 - Configurable via `config/local.json`:
   - Server port/host
@@ -218,6 +222,8 @@ window.WinnieOS = {
 ### Changing Server Configuration
 
 - Edit `config/default.json` for defaults (affects all installations)
+- The shared config loader (`lib/config-loader.js`) handles loading and merging
+- Both `server.js` and `vite.config.js` use the same loader for consistency
 - Document changes in README.md
 
 ### Adding npm Dependencies
@@ -253,15 +259,17 @@ window.WinnieOS = {
 4. **Static assets in public/** - Images/fonts go in `public/assets/` (copied to dist/ by Vite)
 5. **ES modules** - All JavaScript uses `import`/`export`, not IIFE
 6. **Preserve namespace** - Attach to `window.WinnieOS` for compatibility
-7. **Config is merged** - Local overrides default, both are JSON
-8. **Production uses force pull** - Local code changes are overwritten on startup
-9. **Service runs as background process** - Don't expect console output, check logs instead
-10. **Chromium path auto-detection** - Script tries common paths if not configured
-11. **Git branch detection** - Scripts detect current branch, don't hardcode "main"
-12. **Reference resolution** - Everything designed at 1280x800px, scales automatically
-13. **Design tokens** - Always use CSS custom properties, never hardcode values
-14. **Modular structure** - One component = one CSS file + one JS file
-15. **px units only** - Use px units for sizing (no vw/vh inside canvas)
+7. **Config is merged** - Local overrides default via deep merge (handled by `lib/config-loader.js`)
+8. **Shared config loader** - `lib/config-loader.js` is used by both server and Vite for consistency
+9. **Production uses force pull** - Local code changes are overwritten on startup
+10. **Service runs as background process** - Don't expect console output, check logs instead
+11. **Chromium path auto-detection** - Script tries common paths if not configured
+12. **Git branch detection** - Scripts detect current branch, don't hardcode "main"
+13. **Reference resolution** - Everything designed at 1280x800px, scales automatically
+14. **Design tokens** - Always use CSS custom properties, never hardcode values
+15. **Modular structure** - One component = one CSS file + one JS file
+16. **px units only** - Use px units for sizing (no vw/vh inside canvas)
+17. **Config loader** - `lib/config-loader.js` provides single source of truth for config loading
 
 ## CSS Architecture Guidelines
 
@@ -298,6 +306,7 @@ window.WinnieOS = {
 2. Review recent git commits/logs for what's been worked on
 3. Check `logs/winnieos.log` if debugging issues
 4. Verify project structure matches expected layout:
+   - `lib/config-loader.js` - Shared configuration loader
    - `src/css/` - Modular CSS files
    - `src/js/core/` - Core systems (ES modules)
    - `src/js/components/` - Component modules (ES modules)
@@ -305,6 +314,7 @@ window.WinnieOS = {
    - `src/js/apps/` - App plug-ins (auto-discovered)
    - `dist/` - Production build output (committed)
    - `public/assets/` - Static assets (images, fonts)
+   - `config/default.json` - Default configuration (committed)
 
 ## Target Device Context
 
@@ -329,12 +339,6 @@ The architecture is designed to scale from a simple welcome screen to a full "pr
 - **Testing**: Vitest foundation for unit tests
 
 **Don't over-engineer**: Keep it simple until complexity is needed, then add structure incrementally.
-
-## Current Apps
-
-Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Current apps include:
-- `colors` - Radial color picker for changing background color (uses Background utility)
-- `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story` - Various educational apps
 
 ## Current Apps
 
