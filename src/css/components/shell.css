@@ -26,12 +26,12 @@
     left: 0;
     top: 0;
     width: 100%;
-    height: var(--size-topbar-height);
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: flex-start;
     pointer-events: none; /* only the button should be interactive */
+    z-index: 10; /* ensure it's above content so clicks/taps work */
 }
 
 #wos-home-btn {
@@ -58,20 +58,28 @@
 }
 
 .wos-home-icon {
-    font-size: var(--font-size-2xl);
-    line-height: 1;
+    width: var(--size-home-icon);
+    height: var(--size-home-icon);
+    display: block;
 }
 
 #wos-content {
     position: absolute;
     left: 0;
-    top: var(--size-topbar-height);
+    top: 0;
     width: 100%;
-    height: calc(100% - var(--size-topbar-height));
+    height: 100%;
+    z-index: 0;
 }
 
 /* Hide Home button while already on desktop (still mounted, just not distracting). */
 #wos-shell[data-screen="desktop"] #wos-home-btn {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Hide Home during startup/loading (avoid confusing "escape hatch" mid-boot). */
+#wos-shell[data-screen="startup"] #wos-home-btn {
     opacity: 0;
     pointer-events: none;
 }

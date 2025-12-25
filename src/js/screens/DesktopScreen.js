@@ -45,13 +45,6 @@ export const DesktopScreen = (function() {
             rootEl = document.createElement('div');
             rootEl.className = 'wos-desktop';
 
-            const header = document.createElement('div');
-            header.className = 'wos-desktop-header';
-            header.innerHTML = `
-                <div class="wos-desktop-title">Winnie’s Desktop</div>
-                <div class="wos-desktop-subtitle">Tap an app to play</div>
-            `;
-
             const grid = document.createElement('div');
             grid.className = 'wos-app-grid';
 
@@ -59,7 +52,6 @@ export const DesktopScreen = (function() {
                 grid.appendChild(renderAppTile(app, nav));
             });
 
-            rootEl.appendChild(header);
             rootEl.appendChild(grid);
             root.replaceChildren(rootEl);
         },

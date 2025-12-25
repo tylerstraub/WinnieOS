@@ -51,7 +51,12 @@ function ensureDom() {
         homeBtn.id = 'wos-home-btn';
         homeBtn.type = 'button';
         homeBtn.setAttribute('aria-label', 'Home');
-        homeBtn.innerHTML = `<span class="wos-home-icon" aria-hidden="true">⌂</span>`;
+        // Use SVG for reliable centering/sizing across fonts/platforms.
+        homeBtn.innerHTML = `
+            <svg class="wos-home-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+                <path fill="currentColor" d="M12 3.2 3 10.4v10.4h6.2v-6.2h5.6v6.2H21V10.4L12 3.2Zm7 15.6h-2.6v-6.2H7.6v6.2H5V11.4l7-5.6 7 5.6v7.4Z"/>
+            </svg>
+        `;
         homeBtn.addEventListener('click', () => Navigation.goHome());
         topbar.appendChild(homeBtn);
     }

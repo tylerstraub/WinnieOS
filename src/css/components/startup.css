@@ -10,7 +10,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
     padding: var(--spacing-2xl);
 }
 
@@ -18,6 +18,8 @@
     width: var(--size-startup-logo);
     height: var(--size-startup-logo);
     object-fit: contain;
+    /* Compensate for transparent padding inside the logo PNG. */
+    margin-bottom: calc(-1 * var(--spacing-2xl));
     filter: var(--logo-shadow-filter);
     animation: wos-startup-float 1400ms ease-in-out infinite;
 }

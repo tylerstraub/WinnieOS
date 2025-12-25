@@ -129,3 +129,20 @@ body {
     transform: scale(1);
 }
 
+/* ============================================
+   SCROLLBARS
+   WinnieOS should never show visible scrollbars,
+   but touch scrolling should still work.
+   ============================================ */
+#winnieos-canvas,
+#winnieos-canvas * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge Legacy */
+}
+
+#winnieos-canvas::-webkit-scrollbar,
+#winnieos-canvas *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+

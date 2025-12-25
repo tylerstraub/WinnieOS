@@ -51,8 +51,9 @@
 
     /* UI Component Sizing (designed for 1280x800) */
     --size-topbar-height: 80px;
-    --size-home-button: 64px;
-    --size-startup-logo: 220px;
+    --size-home-button: 96px;
+    --size-home-icon: 52px;
+    --size-startup-logo: 520px;
     --size-app-tile-height: 240px;
     --size-app-icon: 140px;
     
