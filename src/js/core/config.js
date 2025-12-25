@@ -33,12 +33,27 @@ export const RuntimeConfig = {
 
         inFlight = (async () => {
             const cfg = await fetchJsonWithTimeout('/winnieos-config.json', 750);
-            cached = cfg || null;
+            // Only cache if we got a valid config object (not null/undefined)
+            // This allows retries if the initial fetch fails
+            if (cfg && typeof cfg === 'object') {
+                cached = cfg;
+            } else {
+                // Don't cache null - allow retry on next call
+                cached = null;
+            }
             inFlight = null;
             return cached;
         })();
 
         return inFlight;
+    },
+    /**
+     * Clear the config cache and force a fresh load on next call.
+     * Useful when config may have changed or when initial load may have failed.
+     */
+    clearCache: function() {
+        cached = null;
+        inFlight = null;
     }
 };
 

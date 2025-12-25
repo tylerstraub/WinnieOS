@@ -55,9 +55,12 @@ async function loadEnabledAppIds() {
     try {
         const config = await RuntimeConfig.load();
         if (config && config.apps && Array.isArray(config.apps.enabled)) {
-            enabledAppIds = new Set(config.apps.enabled.map(id => String(id).trim()).filter(Boolean));
+            const enabledArray = config.apps.enabled.map(id => String(id).trim()).filter(Boolean);
+            enabledAppIds = new Set(enabledArray);
+            console.log('WinnieOS.Apps: Loaded enabled apps from config:', Array.from(enabledAppIds));
         } else {
             // No config or invalid config - enable all apps (backward compatible)
+            console.warn('WinnieOS.Apps: Config missing or invalid apps.enabled, enabling all apps. Config:', config);
             enabledAppIds = new Set(appsById.keys());
         }
     } catch (err) {
@@ -83,12 +86,9 @@ function listSortedFiltered(enabledSet) {
     return listSorted().filter(app => enabledSet.has(app.id));
 }
 
-// Load config eagerly (don't await - it will be available when needed)
-if (typeof window !== 'undefined') {
-    loadEnabledAppIds().catch(() => {
-        // Already handled in loadEnabledAppIds
-    });
-}
+// Don't load config eagerly - let DesktopScreen (or other consumers) trigger the load
+// This avoids race conditions where config loads before server is ready
+// DesktopScreen now waits for config before rendering, so eager load is not needed
 
 export const Apps = {
     list: function() {
@@ -115,9 +115,14 @@ export const Apps = {
     /**
      * Refresh the enabled apps list from config.
      * Useful after config changes.
+     * Forces a fresh config fetch to avoid stale cached values.
      */
     refreshConfig: async function() {
         enabledAppIds = null;
+        // Clear RuntimeConfig cache to force fresh fetch (in case initial load failed or returned stale data)
+        if (RuntimeConfig.clearCache && typeof RuntimeConfig.clearCache === 'function') {
+            RuntimeConfig.clearCache();
+        }
         await loadEnabledAppIds();
     }
 };
