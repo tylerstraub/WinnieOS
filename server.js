@@ -57,11 +57,25 @@ app.use((req, res, next) => {
 
 // Serve static files from dist directory (Vite build output)
 const distPath = path.join(__dirname, 'dist');
+
+// Check if dist directory exists
+if (!fs.existsSync(distPath)) {
+  logger.error(`ERROR: dist directory does not exist at ${distPath}`);
+  logger.error('Please run: npm run build');
+  process.exit(1);
+}
+
 app.use(express.static(distPath));
 
 // Fallback to index.html for SPA routing (if needed in future)
 app.use((req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+  const indexPath = path.join(distPath, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    logger.error(`ERROR: index.html does not exist at ${indexPath}`);
+    res.status(500).send('Server error: dist directory is missing required files. Please run: npm run build');
+    return;
+  }
+  res.sendFile(indexPath);
 });
 
 // Start server

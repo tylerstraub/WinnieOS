@@ -94,6 +94,21 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "  [OK] Dependencies up to date" -ForegroundColor Green
 }
 
+# Ensure dist directory exists (should be committed, but rebuild if missing as safety measure)
+$distPath = Join-Path $projectRoot "dist"
+if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.html"))) {
+    Write-Host "Building production bundle..." -ForegroundColor Yellow
+    npm run build 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "  [OK] Production bundle built" -ForegroundColor Green
+    } else {
+        Write-Error "Failed to build production bundle. Please check errors above."
+        exit 1
+    }
+} else {
+    Write-Host "  [OK] Production bundle exists" -ForegroundColor Green
+}
+
 # Ensure Windows Service is running
 Write-Host "Checking service status..." -ForegroundColor Yellow
 $serviceName = "WinnieOS Server"
