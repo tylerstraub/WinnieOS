@@ -65,7 +65,7 @@ WinnieOS/
 │   ├── install-service.js # Node.js script for Windows Service install/uninstall
 │   ├── install-service.ps1 # PowerShell wrapper for service installation
 │   ├── setup.ps1          # Initial setup script
-│   ├── start.ps1          # Startup script (git pull, start service, launch browser)
+│   ├── start.ps1          # Startup script (git pull, check/build dist/, restart service, launch browser)
 │   ├── restart.ps1       # Remote restart script
 │   ├── setup-task-scheduler.ps1 # Task Scheduler setup script
 │   ├── launch-dev-kiosk.ps1 # Development kiosk launcher
@@ -219,10 +219,11 @@ window.WinnieOS = {
 
 #### PowerShell Scripts
 
-- **`setup.ps1`**: Initial project setup (dependencies, config, optional service install)
-- **`start.ps1`**: Startup sequence (git pull, npm install, start service, launch browser)
+- **`setup.ps1`**: Initial project setup (dependencies, config, optional service install, builds dist/ if needed)
+- **`start.ps1`**: Startup sequence (git pull, npm install, check/build dist/, restart service, launch browser)
 - **`restart.ps1`**: Remote restart (stop browser/service, then delegate to start.ps1)
-- **`install-service.ps1`**: Service installation wrapper (requires admin)
+- **`install-service.ps1`**: Service installation wrapper (requires admin, builds dist/ if needed, stops service before uninstall)
+- **`setup-task-scheduler.ps1`**: Task Scheduler setup (creates/removes startup task)
 
 ## Development Workflow
 
@@ -342,12 +343,14 @@ This will:
    ```powershell
    npm test
    ```
-5. Commit changes (including `dist/`):
+5. Commit changes (including `dist/` if build changed):
    ```powershell
    git add .
    git commit -m "Description of changes"
    git push
    ```
+   
+   **Note**: Always commit the `dist/` directory with your changes. Production expects it to exist, though `start.ps1` will build it if missing.
 
 ### Testing on Production Laptop
 
@@ -475,9 +478,10 @@ On system boot:
 1. Task Scheduler runs `scripts\start.ps1`
 2. Script performs git pull (force, overwrites local changes)
 3. Script runs `npm install` to update dependencies
-4. Script ensures Windows Service is running
-5. Script waits for server to be ready (up to 30 seconds)
-6. Script launches Chromium in kiosk mode pointing to `http://localhost:3000`
+4. Script checks if `dist/` directory exists (builds it if missing)
+5. Script restarts Windows Service (to pick up code changes)
+6. Script waits for server to be ready (up to 30 seconds)
+7. Script launches Chromium in kiosk mode pointing to `http://localhost:3000`
 
 ### Remote Restart
 
@@ -537,11 +541,13 @@ Install service (requires Administrator):
 ```powershell
 .\scripts\install-service.ps1 install
 ```
+The installation script will automatically build `dist/` if it doesn't exist (service requires it).
 
 Uninstall service (requires Administrator):
 ```powershell
 .\scripts\install-service.ps1 uninstall
 ```
+The uninstall script will stop the service before removing it.
 
 Or use npm scripts:
 ```powershell
@@ -557,6 +563,12 @@ npm run uninstall-service
 
 Initial setup script. Checks prerequisites, installs dependencies, creates local config, optionally installs service.
 
+**What it does:**
+- Checks prerequisites (Node.js, npm, Git)
+- Installs npm dependencies
+- Creates `config/local.json` from template
+- Optionally installs Windows Service (requires admin, builds `dist/` if needed)
+
 **Usage:**
 ```powershell
 .\scripts\setup.ps1
@@ -565,7 +577,15 @@ Initial setup script. Checks prerequisites, installs dependencies, creates local
 
 #### `scripts/start.ps1`
 
-Startup script for production. Pulls git updates, ensures service is running, launches browser.
+Startup script for production. Pulls git updates, ensures `dist/` exists, restarts service, launches browser.
+
+**What it does:**
+- Performs git pull (force, overwrites local changes)
+- Runs `npm install` to update dependencies
+- Checks if `dist/` exists (builds if missing)
+- Restarts Windows Service to pick up code changes
+- Waits for server to be ready
+- Launches browser in kiosk mode
 
 **Usage:**
 ```powershell
@@ -645,9 +665,10 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 ### Service won't start
 
 - Ensure service is installed: `Get-Service "WinnieOS Server"`
-- Check service logs in Windows Event Viewer
+- Check service logs in Windows Event Viewer or `logs/winnieos.log`
 - Verify `server.js` exists and is accessible
-- Run service installation as Administrator
+- Verify `dist/` directory exists (service requires it)
+- Run service installation as Administrator (install script will build `dist/` if missing)
 
 ### Browser won't launch
 
@@ -666,7 +687,9 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Check git status: `git status`
 - Verify remote is configured: `git remote get-url origin`
 - Check current branch: `git branch`
-- Manual pull: `git fetch --all && git reset --hard origin/main`
+- Manual pull: `git fetch --all && git reset --hard origin/<branch>` (replace `<branch>` with your branch name)
+- Service restart: The service is automatically restarted by `start.ps1` to pick up changes
+- Check that `dist/` is up to date (should be committed, but start.ps1 will rebuild if missing)
 
 ## Target Device Specifications
 
@@ -727,7 +750,3 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Routing system for multi-screen navigation
 - Component library expansion
 - Theme system for multiple color themes
-
-## License
-
-ISC
