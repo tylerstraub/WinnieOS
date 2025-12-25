@@ -93,6 +93,21 @@
             color: white;
         }
 
+        /* Target resolution: fill screen completely without scaling */
+        @media screen and (width: 1280px) and (height: 800px) {
+            #winnieos-canvas {
+                width: 100vw !important;
+                height: 100vh !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                transform: none !important;
+            }
+            body {
+                display: block !important;
+            }
+        }
+
         /* ============================================
            APPLICATION STYLES
            Add app-specific styles below
@@ -152,35 +167,25 @@
                     const viewportWidth = window.innerWidth;
                     const viewportHeight = window.innerHeight;
 
-                    // If viewport exactly matches target resolution, fill directly (no scaling needed)
-                    if (Math.abs(viewportWidth - DESIGN_WIDTH) <= TOLERANCE && 
-                        Math.abs(viewportHeight - DESIGN_HEIGHT) <= TOLERANCE) {
-                        // Remove all transforms and sizing constraints - fill viewport completely
-                        canvas.style.width = '100vw';
-                        canvas.style.height = '100vh';
-                        canvas.style.transform = 'none';
-                        canvas.style.position = 'fixed';
-                        canvas.style.top = '0';
-                        canvas.style.left = '0';
-                        canvas.style.margin = '0';
-                        canvas.style.padding = '0';
-                        document.body.style.display = 'block'; // Remove flex when filling
-                        return;
-                    }
-
+                    // If viewport exactly matches target resolution, CSS media query handles it
                     // For other resolutions, scale to fit while maintaining aspect ratio
-                    document.body.style.display = 'flex'; // Restore flex for centering
-                    const scaleX = viewportWidth / DESIGN_WIDTH;
-                    const scaleY = viewportHeight / DESIGN_HEIGHT;
-                    const scale = Math.min(scaleX, scaleY);
+                    if (Math.abs(viewportWidth - DESIGN_WIDTH) > TOLERANCE || 
+                        Math.abs(viewportHeight - DESIGN_HEIGHT) > TOLERANCE) {
+                        document.body.style.display = 'flex'; // Use flex for centering when scaling
+                        const scaleX = viewportWidth / DESIGN_WIDTH;
+                        const scaleY = viewportHeight / DESIGN_HEIGHT;
+                        const scale = Math.min(scaleX, scaleY);
 
-                    // Reset to original size and apply scale transform
-                    canvas.style.width = DESIGN_WIDTH + 'px';
-                    canvas.style.height = DESIGN_HEIGHT + 'px';
-                    canvas.style.transform = `scale(${scale})`;
-                    canvas.style.position = 'relative';
-                    canvas.style.margin = '';
-                    canvas.style.padding = '';
+                        // Reset to original size and apply scale transform
+                        canvas.style.width = DESIGN_WIDTH + 'px';
+                        canvas.style.height = DESIGN_HEIGHT + 'px';
+                        canvas.style.transform = `scale(${scale})`;
+                        canvas.style.position = 'relative';
+                    } else {
+                        // At target resolution, CSS media query handles sizing
+                        // Just ensure body doesn't use flex
+                        document.body.style.display = 'block';
+                    }
                 }
 
                 // Public API
