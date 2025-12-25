@@ -5,10 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WinnieOS</title>
     <style>
-        /* Base viewport - full screen */
-        body {
+        /* ============================================
+           CSS RESET / NORMALIZE
+           Consistent base styling across browsers
+           ============================================ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        * {
             margin: 0;
             padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        img, picture, video, canvas, svg {
+            display: block;
+            max-width: 100%;
+        }
+
+        input, button, textarea, select {
+            font: inherit;
+        }
+
+        p, h1, h2, h3, h4, h5, h6 {
+            overflow-wrap: break-word;
+        }
+
+        /* ============================================
+           KIOSK PROTECTIONS
+           Prevent accidental browser interactions
+           ============================================ */
+        body, #winnieos-canvas {
+            /* Disable text selection - cleaner UX for kids */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            
+            /* Disable tap highlight on touch devices */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Allow text selection only in input fields (for future forms) */
+        input, textarea {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        /* ============================================
+           BASE VIEWPORT
+           Full screen container
+           ============================================ */
+        body {
             width: 100vw;
             height: 100vh;
             overflow: hidden;
@@ -18,18 +78,25 @@
             background: #1a1a1a; /* Background for letterboxing areas */
         }
 
-        /* Design canvas - designed at 1280x800 (16:10 reference resolution) */
+        /* ============================================
+           DESIGN CANVAS
+           Designed at 1280x800 (16:10 reference resolution)
+           All UI elements should be sized relative to this canvas
+           ============================================ */
         #winnieos-canvas {
             width: 1280px;
             height: 800px;
             position: relative;
             transform-origin: center center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             color: white;
         }
 
-        /* Example content - all sizing relative to 1280x800 canvas */
+        /* ============================================
+           APPLICATION STYLES
+           Add app-specific styles below
+           ============================================ */
         .container {
             width: 100%;
             height: 100%;
@@ -60,28 +127,135 @@
     </div>
 
     <script>
-        // Scaling system: scales 1280x800 design to fit any viewport
+        /**
+         * WinnieOS Core
+         * Foundation layer for the entire OS
+         * Organized as a namespace for scalable architecture
+         */
         (function() {
-            const DESIGN_WIDTH = 1280;
-            const DESIGN_HEIGHT = 800;
-            const canvas = document.getElementById('winnieos-canvas');
+            'use strict';
 
-            function updateScale() {
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
+            const WinnieOS = window.WinnieOS = window.WinnieOS || {};
 
-                // Calculate scale to fit viewport (maintains aspect ratio)
-                const scaleX = viewportWidth / DESIGN_WIDTH;
-                const scaleY = viewportHeight / DESIGN_HEIGHT;
-                const scale = Math.min(scaleX, scaleY);
+            /* ============================================
+               VIEWPORT SCALING
+               Scales 1280x800 design to fit any viewport
+               ============================================ */
+            WinnieOS.Viewport = (function() {
+                const DESIGN_WIDTH = 1280;
+                const DESIGN_HEIGHT = 800;
+                const canvas = document.getElementById('winnieos-canvas');
 
-                // Apply scale transform
-                canvas.style.transform = `scale(${scale})`;
+                function updateScale() {
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+
+                    // Calculate scale to fit viewport (maintains aspect ratio)
+                    const scaleX = viewportWidth / DESIGN_WIDTH;
+                    const scaleY = viewportHeight / DESIGN_HEIGHT;
+                    const scale = Math.min(scaleX, scaleY);
+
+                    // Apply scale transform
+                    canvas.style.transform = `scale(${scale})`;
+                }
+
+                // Public API
+                return {
+                    init: function() {
+                        updateScale();
+                        window.addEventListener('resize', updateScale);
+                    }
+                };
+            })();
+
+            /* ============================================
+               KIOSK PROTECTIONS
+               Prevents browser navigation and accidental interactions
+               ============================================ */
+            WinnieOS.Kiosk = (function() {
+                // Disable context menu (right-click)
+                function disableContextMenu(e) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Block browser navigation shortcuts
+                function blockNavigation(e) {
+                    // Block F5 (refresh)
+                    if (e.key === 'F5') {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Block Ctrl+R, Ctrl+Shift+R (refresh)
+                    if (e.ctrlKey && (e.key === 'r' || e.key === 'R')) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Block Alt+Left/Right (back/forward navigation)
+                    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Block browser backspace navigation (when not in input)
+                    if (e.key === 'Backspace' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable) {
+                        e.preventDefault();
+                        return false;
+                    }
+
+                    // Block Ctrl+W, Ctrl+Shift+W (close window/tab)
+                    if (e.ctrlKey && (e.key === 'w' || e.key === 'W')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+
+                // Disable drag-to-scroll gestures (reinforce Chrome args)
+                function preventDragScroll(e) {
+                    if (e.button === 1) { // Middle mouse button
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+
+                // Public API
+                return {
+                    init: function() {
+                        // Context menu prevention
+                        document.addEventListener('contextmenu', disableContextMenu);
+                        
+                        // Navigation blocking
+                        document.addEventListener('keydown', blockNavigation);
+                        
+                        // Drag scroll prevention
+                        document.addEventListener('mousedown', preventDragScroll);
+                        
+                        // Prevent default browser drag behaviors
+                        document.addEventListener('dragstart', function(e) {
+                            e.preventDefault();
+                            return false;
+                        });
+                    }
+                };
+            })();
+
+            /* ============================================
+               INITIALIZATION
+               Initialize all core systems on DOM ready
+               ============================================ */
+            function init() {
+                WinnieOS.Viewport.init();
+                WinnieOS.Kiosk.init();
             }
 
-            // Update on load and resize
-            updateScale();
-            window.addEventListener('resize', updateScale);
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
         })();
     </script>
 </body>
