@@ -3,7 +3,8 @@
 
 param(
     [string]$ChromiumPath = "",
-    [string]$Url = "http://localhost:3000"
+    [string]$Url = "http://localhost:3000",
+    [switch]$SkipBuild = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -94,9 +95,17 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "  [OK] Dependencies up to date" -ForegroundColor Green
 }
 
-# Ensure dist directory exists (should be committed, but rebuild if missing as safety measure)
+# Ensure dist is up-to-date.
+# IMPORTANT: Production serves `dist/` only. If we pull new source but don't rebuild,
+# we'll keep serving an old bundle and the UI will appear to "ignore" config/code changes.
 $distPath = Join-Path $projectRoot "dist"
-if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.html"))) {
+if ($SkipBuild) {
+    if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.html"))) {
+        Write-Error "dist/ is missing but -SkipBuild was provided. Cannot continue."
+        exit 1
+    }
+    Write-Host "  [OK] Skipping build (-SkipBuild). Using existing dist/." -ForegroundColor Yellow
+} else {
     Write-Host "Building production bundle..." -ForegroundColor Yellow
     npm run build 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
@@ -105,8 +114,6 @@ if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.h
         Write-Error "Failed to build production bundle. Please check errors above."
         exit 1
     }
-} else {
-    Write-Host "  [OK] Production bundle exists" -ForegroundColor Green
 }
 
 # Ensure Windows Service is running (restart to pick up any code changes)
@@ -172,6 +179,34 @@ if (-not $serverReady) {
 }
 
 Write-Host "  [OK] Server is ready" -ForegroundColor Green
+
+# Verify runtime config endpoint is available before launching the browser.
+# This prevents the frontend from racing and falling back to "enable all apps".
+Write-Host "Verifying runtime config endpoint..." -ForegroundColor Yellow
+$configReady = $false
+$attempt = 0
+while ($attempt -lt $maxAttempts) {
+    try {
+        $cfgResp = Invoke-WebRequest -Uri ($Url.TrimEnd('/') + "/winnieos-config.json") -TimeoutSec 1 -UseBasicParsing -ErrorAction Stop
+        if ($cfgResp -and $cfgResp.Content) {
+            $cfgObj = $cfgResp.Content | ConvertFrom-Json
+            if ($cfgObj -and $cfgObj.apps -and $cfgObj.apps.enabled) {
+                $configReady = $true
+                break
+            }
+        }
+    } catch {
+        # ignore and retry
+    }
+    Start-Sleep -Seconds 1
+    $attempt++
+}
+
+if (-not $configReady) {
+    Write-Warning "Runtime config endpoint did not validate in time. Frontend may fall back to enabling all apps."
+} else {
+    Write-Host "  [OK] Runtime config available" -ForegroundColor Green
+}
 
 # Launch Chromium in kiosk mode
 Write-Host "Launching browser in kiosk mode..." -ForegroundColor Yellow

@@ -57,10 +57,8 @@ async function loadEnabledAppIds() {
         if (config && config.apps && Array.isArray(config.apps.enabled)) {
             const enabledArray = config.apps.enabled.map(id => String(id).trim()).filter(Boolean);
             enabledAppIds = new Set(enabledArray);
-            console.log('WinnieOS.Apps: Loaded enabled apps from config:', Array.from(enabledAppIds));
         } else {
             // No config or invalid config - enable all apps (backward compatible)
-            console.warn('WinnieOS.Apps: Config missing or invalid apps.enabled, enabling all apps. Config:', config);
             enabledAppIds = new Set(appsById.keys());
         }
     } catch (err) {
