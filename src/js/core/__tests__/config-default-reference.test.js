@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { Storage } from '../../utils/storage.js';
 
-const STORAGE_KEY = 'winnieos.display.reference';
+const STORAGE_KEY = 'display.reference';
 
 function mockFetchConfig(ref) {
   globalThis.fetch = vi.fn(async () => ({
@@ -33,6 +34,7 @@ describe('Core init (config-driven default reference resolution)', () => {
   });
 
   it('applies display.reference from config when no persisted reference exists', async () => {
+    // Test with a non-default config value to verify config is applied
     mockFetchConfig({ width: 1024, height: 768 });
 
     const { Display } = await import('../display.js');
@@ -47,7 +49,9 @@ describe('Core init (config-driven default reference resolution)', () => {
   });
 
   it('does NOT override persisted localStorage reference with config default', async () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ width: 1400, height: 900 }));
+    // Use Storage utility to set persisted reference (consistent with implementation)
+    // Use a different resolution than the config to verify persisted value takes precedence
+    Storage.set(STORAGE_KEY, { width: 1920, height: 1080 });
     mockFetchConfig({ width: 1024, height: 768 });
 
     const { Display } = await import('../display.js');

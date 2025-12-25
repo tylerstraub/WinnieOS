@@ -111,11 +111,11 @@ WinnieOS/
  - Programmatic access is available via `WinnieOS.Viewport.getMetrics()`
 
 **Display Module (Reference Resolution Owner)**
-- `WinnieOS.Display` owns the reference resolution and persists it in `localStorage`
+- `WinnieOS.Display` owns the reference resolution and persists it via `WinnieOS.Utils.Storage`
 - It writes the reference into CSS variables:
   - `--ref-width`, `--ref-height`, `--ref-aspect-ratio`
 - It emits a `winnieos:displaychange` event so systems can react (Viewport listens to this)
-- Future “change WinnieOS resolution” UI should call:
+- Future "change WinnieOS resolution" UI should call:
   - `WinnieOS.Display.setReferenceSize({ width, height })`
   - For temporary/dev testing without saving: `WinnieOS.Display.setReferenceSize({ width, height, persist: false })`
   - To return to defaults: `WinnieOS.Display.resetReferenceSize()`
@@ -188,12 +188,14 @@ window.WinnieOS = {
     Screens: { ... },       // Screen registry (Startup/Desktop/AppHost)
     Apps: { ... },          // App registry (auto-discovered, filtered by config)
     Components: { ... },    // Reusable UI components (optional)
-    Utils: { ... }          // Utility functions
+    Utils: {                // Utility functions
+        Storage: { ... }    // LocalStorage wrapper for persistence
+    }
 }
 ```
 
 **Core Systems (`js/core/`):**
-- `display.js` - Reference resolution owner (virtual computer resolution), persists and broadcasts changes
+- `display.js` - Reference resolution owner (virtual computer resolution), persists via Storage utility and broadcasts changes
 - `viewport.js` - Scales/centers the reference canvas into the real device viewport (letterbox/pillarbox)
 - `kiosk.js` - Kiosk mode protections (blocks navigation, prevents interactions)
 - `config.js` - Runtime config loader (fetches `/winnieos-config.json` for frontend)
@@ -207,6 +209,7 @@ window.WinnieOS = {
 
 **Utilities (`js/utils/`):**
 - `index.js` - Utility namespace
+- `storage.js` - General-purpose localStorage wrapper with JSON serialization (`WinnieOS.Utils.Storage`)
 - Future: Shared helper functions (DOM helpers, event helpers, etc.)
 
 **Loading Order (in `src/main.js`):**
@@ -476,6 +479,47 @@ Screens are mounted inside the Shell (`src/js/shell/`) and switched by `WinnieOS
    ```
    Note: Utility registry (`utils/index.js`) is already imported in `main.js`
 
+### Using the Storage Utility
+
+WinnieOS provides a general-purpose storage utility for persisting data locally:
+
+**Import the Storage utility:**
+```javascript
+import { Storage } from '../utils/storage.js';
+// Or access via namespace: window.WinnieOS.Utils.Storage
+```
+
+**Basic usage:**
+```javascript
+// Store data (automatically JSON stringified)
+Storage.set('my.key', { data: 'value' });
+Storage.set('user.preferences', { theme: 'dark', volume: 0.8 });
+
+// Retrieve data (with optional default value)
+const value = Storage.get('my.key'); // Returns stored value or null
+const prefs = Storage.get('user.preferences', {}); // Returns stored value or {}
+
+// Check if key exists
+if (Storage.has('my.key')) {
+    // Key exists
+}
+
+// Remove a key
+Storage.remove('my.key');
+
+// Get all WinnieOS storage keys (without prefix)
+const keys = Storage.keys(); // Returns array like ['display.reference', 'my.key']
+
+// Clear all WinnieOS storage
+Storage.clear();
+```
+
+**Key features:**
+- Automatic key prefixing (`winnieos.` prefix added automatically)
+- JSON serialization (objects, arrays, primitives)
+- Graceful error handling (returns false/null when storage unavailable)
+- Keys are namespaced to avoid conflicts with other applications
+
 ## Production Deployment
 
 ### Initial Setup on Target Laptop
@@ -607,7 +651,7 @@ Edit `config/local.json`:
 
 - **port**: Server port (default: 3000)
 - **host**: Server hostname (default: localhost)
-- **display.reference.width/height**: Default "virtual computer" reference resolution (used only if the user has not persisted a reference size in localStorage)
+- **display.reference.width/height**: Default "virtual computer" reference resolution (used only if the user has not persisted a reference size via Storage utility)
 - **logging.level**: Log level (info, warn, error, debug)
 - **chromium.path**: Path to Chromium/Chrome executable
 - **apps.enabled**: Array of app IDs to enable on desktop (if omitted, all discovered apps are enabled)
@@ -802,7 +846,7 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 
 - Force pull on production (overwrites local changes)
 - Local config (`config/local.json`) is preserved (gitignored)
-- Application state (localStorage/IndexedDB) is preserved (browser storage)
+- Application state (via `WinnieOS.Utils.Storage` / localStorage/IndexedDB) is preserved (browser storage)
 
 ### Code Style
 

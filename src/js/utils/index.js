@@ -5,6 +5,9 @@
  * Add utility modules here as needed
  */
 
+// Import utility modules
+import './storage.js';
+
 // Utilities namespace
 export const Utils = {};
 
@@ -14,10 +17,10 @@ if (typeof window !== 'undefined') {
     window.WinnieOS.Utils = Utils;
 }
 
-// Utility functions will be added here as needed
+// Utility modules are imported above and attached to window.WinnieOS.Utils
 // Example structure:
-// - utils/dom.js - DOM manipulation helpers
-// - utils/events.js - Event handling helpers
-// - utils/storage.js - LocalStorage helpers
+// - utils/storage.js - LocalStorage helpers (imported above)
+// - utils/dom.js - DOM manipulation helpers (add as needed)
+// - utils/events.js - Event handling helpers (add as needed)
 // etc.
 

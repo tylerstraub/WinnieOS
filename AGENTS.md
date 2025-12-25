@@ -56,6 +56,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `src/js/components/index.js` - Component registry namespace
 - `src/js/components/` - Individual component modules (as features are added)
 - `src/js/utils/index.js` - Utility functions namespace
+- `src/js/utils/storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
 - `src/js/utils/` - Utility modules (as needed)
 
 **Build Output:**
@@ -113,7 +114,9 @@ window.WinnieOS = {
     Screens: { ... },       // Screen registry
     Apps: { ... },          // App registry (auto-discovered, filtered by config)
     Components: { ... },    // Component registry
-    Utils: { ... }          // Utility functions
+    Utils: {                // Utility functions
+        Storage: { ... }    // LocalStorage wrapper for persistence
+    }
 }
 ```
 
@@ -142,7 +145,7 @@ window.WinnieOS = {
 
 1. **Force git pull**: Production always overwrites local changes with upstream (except gitignored files)
 2. **Local config persists**: `config/local.json` is gitignored, survives updates
-3. **Browser state persists**: localStorage/IndexedDB not affected by code updates
+3. **Browser state persists**: Storage utility (localStorage/IndexedDB) not affected by code updates
 4. **No admin mode needed**: Kiosk mode can be exited with Alt+F4 (toddlers unlikely to discover)
 5. **Simple server**: Express static file server only - no complex backend needed
 6. **Modular architecture**: CSS and JS split into modules for scalability
@@ -177,7 +180,7 @@ window.WinnieOS = {
 - **What survives updates**: 
   - `config/local.json` (gitignored)
   - `node_modules/` (reinstalled on startup)
-  - Browser storage (localStorage/IndexedDB)
+  - Browser storage (via `WinnieOS.Utils.Storage` / localStorage/IndexedDB)
 
 ## Common Tasks for Agents
 
@@ -205,7 +208,8 @@ window.WinnieOS = {
 **Adding a Utility:**
 1. Create utility file: `src/js/utils/my-utility.js` (ES module with `export`)
 2. Add to `WinnieOS.Utils` namespace (attach to `window.WinnieOS`)
-3. Import in `src/main.js` if needed (utility registry is already imported)
+3. Import in `src/js/utils/index.js` to register it (utilities are auto-loaded)
+4. Example: `src/js/utils/storage.js` provides `WinnieOS.Utils.Storage` for local persistence
 
 ### Changing Server Configuration
 

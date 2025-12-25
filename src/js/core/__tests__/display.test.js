@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Display } from '../display.js';
+import { Storage } from '../../utils/storage.js';
 
 describe('Display', () => {
   beforeEach(() => {
@@ -49,11 +50,11 @@ describe('Display', () => {
     Display.init();
     Display.setReferenceSize({ width: 1920, height: 1080, persist: true });
     
-    const stored = localStorage.getItem('winnieos.display.reference');
+    // Verify storage using Storage utility (consistent with implementation)
+    const stored = Storage.get('display.reference');
     expect(stored).toBeTruthy();
-    const parsed = JSON.parse(stored);
-    expect(parsed.width).toBe(1920);
-    expect(parsed.height).toBe(1080);
+    expect(stored.width).toBe(1920);
+    expect(stored.height).toBe(1080);
   });
 
   it('should attach to window.WinnieOS namespace', () => {

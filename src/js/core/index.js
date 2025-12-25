@@ -9,15 +9,12 @@ import { Display } from './display.js';
 import { Viewport } from './viewport.js';
 import { Kiosk } from './kiosk.js';
 import { RuntimeConfig } from './config.js';
+import { Storage } from '../utils/storage.js';
 
-const DISPLAY_STORAGE_KEY = 'winnieos.display.reference';
+const DISPLAY_STORAGE_KEY = 'display.reference';
 
 function hasPersistedDisplayReference() {
-    try {
-        return !!window.localStorage.getItem(DISPLAY_STORAGE_KEY);
-    } catch (_) {
-        return false;
-    }
+    return Storage.has(DISPLAY_STORAGE_KEY);
 }
 
 function applyDisplayDefaultsFromConfig(cfg) {

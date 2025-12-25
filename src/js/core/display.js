@@ -12,7 +12,9 @@
  * - Viewport scaling is responsible for fitting that reference canvas into the real device viewport.
  */
 
-const STORAGE_KEY = 'winnieos.display.reference';
+import { Storage } from '../utils/storage.js';
+
+const STORAGE_KEY = 'display.reference';
 const FALLBACK_REFERENCE = { width: 1280, height: 800 };
 
 let reference = null;
@@ -52,34 +54,20 @@ function readDefaultFromCss() {
 }
 
 function readPersisted() {
-    try {
-        const raw = window.localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return null;
-        const width = clampInt(parsed.width, 320, 7680);
-        const height = clampInt(parsed.height, 240, 4320);
-        const ref = { width, height };
-        return isValidReference(ref) ? ref : null;
-    } catch (_) {
-        return null;
-    }
+    const stored = Storage.get(STORAGE_KEY);
+    if (!stored || typeof stored !== 'object') return null;
+    const width = clampInt(stored.width, 320, 7680);
+    const height = clampInt(stored.height, 240, 4320);
+    const ref = { width, height };
+    return isValidReference(ref) ? ref : null;
 }
 
 function persist(ref) {
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ref));
-    } catch (_) {
-        // ignore (storage may be unavailable in some kiosk/lockdown scenarios)
-    }
+    Storage.set(STORAGE_KEY, ref);
 }
 
 function clearPersisted() {
-    try {
-        window.localStorage.removeItem(STORAGE_KEY);
-    } catch (_) {
-        // ignore
-    }
+    Storage.remove(STORAGE_KEY);
 }
 
 function applyToCss(ref) {
