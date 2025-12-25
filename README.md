@@ -266,6 +266,7 @@ window.WinnieOS = {
   - Display reference resolution (default: 1280x800)
   - Apps enabled list (`apps.enabled` array) - controls which apps appear on desktop
 - Runtime config exposed at `/winnieos-config.json` for frontend (safe subset)
+- Debug endpoint at `/winnieos-debug.json` (localhost-only) for diagnosing config/dist mismatches in production
 
 #### Windows Service
 
@@ -277,8 +278,8 @@ window.WinnieOS = {
 #### PowerShell Scripts
 
 - **`setup.ps1`**: Initial project setup (dependencies, config, optional service install, builds dist/ if needed)
-- **`start.ps1`**: Startup sequence (git pull, npm install, check/build dist/, restart service, launch browser)
-- **`restart.ps1`**: Remote restart (stop browser/service, then delegate to start.ps1)
+- **`start.ps1`**: Startup sequence (git pull, npm install, rebuild dist/, restart service, launch browser). Auto-elevates with UAC prompt if admin privileges needed for service control.
+- **`restart.ps1`**: Remote restart (stop browser/service, then delegate to start.ps1). Auto-elevates with UAC prompt if admin privileges needed.
 - **`install-service.ps1`**: Service installation wrapper (requires admin, builds dist/ if needed, stops service before uninstall)
 - **`setup-task-scheduler.ps1`**: Task Scheduler setup (creates/removes startup task)
 
@@ -407,7 +408,7 @@ This will:
    git push
    ```
    
-   **Note**: Always commit the `dist/` directory with your changes. Production expects it to exist, though `start.ps1` will build it if missing.
+   **Note**: Always commit the `dist/` directory with your changes. Production expects it to exist, though `start.ps1` rebuilds it on every startup by default (use `-SkipBuild` to skip rebuilding).
 
 ### Testing on Production Laptop
 
@@ -693,11 +694,14 @@ Edit `config/local.json`:
 - **display.reference.width/height**: Default "virtual computer" reference resolution (used only if the user has not persisted a reference size via Storage utility)
 - **logging.level**: Log level (info, warn, error, debug)
 - **chromium.path**: Path to Chromium/Chrome executable
-- **apps.enabled**: Array of app IDs to enable on desktop (if omitted, all discovered apps are enabled)
+- **apps.enabled**: Array of app IDs to enable on desktop
 
 If `chromium.path` is not specified, `start.ps1` will attempt to auto-detect common installation paths.
 
-If `apps.enabled` is not specified, all discovered apps are enabled (backward compatible).
+**Apps filtering behavior:**
+- If `apps.enabled` is specified in config: only those apps are shown
+- If `apps.enabled` is missing but config is available: all discovered apps are enabled (backward compatible)
+- If config is unavailable (server not ready): defaults to `['colors']` only (safe fallback)
 
 ### Windows Service Management
 
@@ -741,31 +745,37 @@ Initial setup script. Checks prerequisites, installs dependencies, creates local
 
 #### `scripts/start.ps1`
 
-Startup script for production. Pulls git updates, ensures `dist/` exists, restarts service, launches browser.
+Startup script for production. Pulls git updates, rebuilds `dist/`, restarts service, launches browser.
 
 **What it does:**
 - Performs git pull (force, overwrites local changes)
 - Runs `npm install` to update dependencies
-- Checks if `dist/` exists (builds if missing)
-- Restarts Windows Service to pick up code changes
+- Rebuilds `dist/` (unless `-SkipBuild` is passed)
+- Restarts Windows Service to pick up code changes (auto-elevates with UAC if needed)
 - Waits for server to be ready
+- Verifies runtime config endpoint is available
 - Launches browser in kiosk mode
+
+**Important:** The script will automatically prompt for UAC elevation if admin privileges are needed to restart the Windows Service. This prevents silently running an old server after code updates. Use `-NoElevate` to disable auto-elevation, or `-ContinueWithoutServiceRestart` to skip service restart entirely (not recommended).
 
 **Usage:**
 ```powershell
 .\scripts\start.ps1
 .\scripts\start.ps1 -ChromiumPath "C:\Path\To\Chrome.exe"
 .\scripts\start.ps1 -Url "http://localhost:3000"
+.\scripts\start.ps1 -SkipBuild  # Skip rebuilding dist/ (use existing)
+.\scripts\start.ps1 -NoElevate  # Don't auto-elevate (will fail if admin needed)
 ```
 
 #### `scripts/restart.ps1`
 
-Remote restart script. Stops browser and service, then runs start.ps1.
+Remote restart script. Stops browser and service, then runs start.ps1. Auto-elevates with UAC if admin privileges are needed.
 
 **Usage:**
 ```powershell
 .\scripts\restart.ps1
 .\scripts\restart.ps1 -ChromiumPath "C:\Path\To\Chrome.exe"
+.\scripts\restart.ps1 -SkipBuild  # Pass through to start.ps1
 ```
 
 #### `scripts/setup-task-scheduler.ps1`
@@ -852,8 +862,9 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Verify remote is configured: `git remote get-url origin`
 - Check current branch: `git branch`
 - Manual pull: `git fetch --all && git reset --hard origin/<branch>` (replace `<branch>` with your branch name)
-- Service restart: The service is automatically restarted by `start.ps1` to pick up changes
-- Check that `dist/` is up to date (should be committed, but start.ps1 will rebuild if missing)
+- Service restart: The service is automatically restarted by `start.ps1` to pick up changes (script auto-elevates with UAC if needed)
+- Check that `dist/` is up to date: `start.ps1` rebuilds `dist/` on every startup by default
+- If service restart fails silently: Check that you allowed the UAC prompt, or run `start.ps1` from an elevated PowerShell session
 
 ## Target Device Specifications
 

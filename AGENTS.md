@@ -138,10 +138,10 @@ window.WinnieOS = {
 
 - Windows Service runs persistently in background
 - `scripts/start.ps1` runs on system startup (via Task Scheduler)
-- Startup sequence: git pull (force) → npm install → check/build `dist/` → restart service → launch browser
-- Service serves pre-built `dist/` directory (committed to repo, but script will build if missing)
-- Service is restarted on each startup to pick up code changes
-- Remote restart: `scripts/restart.ps1` (stops browser/service, then runs start.ps1)
+- Startup sequence: git pull (force) → npm install → rebuild `dist/` → restart service → launch browser
+- Service serves pre-built `dist/` directory (committed to repo, but script rebuilds on every startup by default)
+- Service is restarted on each startup to pick up code changes (script auto-elevates with UAC if needed)
+- Remote restart: `scripts/restart.ps1` (stops browser/service, then runs start.ps1, auto-elevates if needed)
 
 ## Important Design Decisions
 
@@ -166,8 +166,9 @@ window.WinnieOS = {
   - Logging level
   - Chromium executable path (auto-detected if not set)
   - Display reference resolution (default: 1280x800)
-  - Apps enabled list (`apps.enabled` array)
+  - Apps enabled list (`apps.enabled` array) - if missing/unavailable, defaults to `['colors']` only (safe fallback)
 - Runtime config exposed at `/winnieos-config.json` (safe subset for frontend)
+- Debug endpoint at `/winnieos-debug.json` (localhost-only) for diagnosing config/dist mismatches
 - Frontend loads config via `WinnieOS.Config.load()` (cached, async)
 
 ## Key Scripts

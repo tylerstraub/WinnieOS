@@ -1,5 +1,8 @@
 # WinnieOS Remote Restart Script
 # This script stops everything, updates, and restarts (useful for remote SSH access)
+#
+# Note: Helper functions (Test-IsAdmin, Relaunch-Elevated) are duplicated from start.ps1
+# to avoid shared module dependencies. This is intentional for standalone script execution.
 
 param(
     [string]$ChromiumPath = "",
