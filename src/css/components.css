@@ -10,6 +10,7 @@
 @import 'components/desktop.css';
 @import 'components/apps.css';
 @import 'components/apps-colors.css';
+@import 'components/apps-notepad.css';
 
 /* Base Typography Styles */
 h1 {

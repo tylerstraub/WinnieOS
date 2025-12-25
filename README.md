@@ -422,7 +422,7 @@ See `DAD.md` for the full guide. Short version:
 
 1. Create: `src/js/apps/<appId>/app.js`
 2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
-3. (Optional) Add an icon in `public/assets/images/apps/...` and use `iconSrc`
+3. (Optional) Add `iconEmoji` (e.g., `iconEmoji: '📝'`) or `iconSrc` (path to image in `public/assets/images/apps/...`)
 4. (Optional) Add app ID to `config/default.json` → `apps.enabled` array (if omitted, app is auto-enabled)
 5. Build and commit `dist/` for production updates
 
@@ -671,19 +671,8 @@ Edit `config/local.json`:
   },
   "apps": {
     "enabled": [
-      "animals",
-      "blocks",
-      "bubbles",
-      "colors",
-      "dance",
-      "garden",
-      "memory",
-      "music",
-      "numbers",
-      "paint",
-      "piano",
-      "shapes",
-      "story"
+      "notepad",
+      "colors"
     ]
   }
 }

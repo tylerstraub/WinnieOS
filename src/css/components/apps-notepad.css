@@ -1,0 +1,221 @@
+/* ============================================
+  NOTEPAD APP (toddler-first)
+  - Big paper area for typing
+  - Bottom toolbar with color swatches + emoji + trash
+  - Curated emoji panel
+  ============================================ */
+
+.wos-notepad-app {
+    width: 100%;
+    height: 100%;
+    padding: var(--spacing-xl);
+    box-sizing: border-box;
+}
+
+.wos-notepad-wrap {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: var(--spacing-lg);
+    /* Keep content out from under the top-left Home button */
+    /* Also leave room for the emoji strip so it never overlaps the paper */
+    padding-top: calc(var(--size-topbar-height) + var(--spacing-3xl));
+    box-sizing: border-box;
+    position: relative; /* anchor emoji strip + confirm overlay */
+}
+
+.wos-notepad-paper {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--radius-2xl);
+    /* Softer "paper" with subtle texture (no image assets needed) */
+    background:
+        /* gentle highlight */
+        radial-gradient(1200px 600px at 20% 10%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 60%),
+        /* faint paper fibers */
+        repeating-linear-gradient(
+            135deg,
+            rgba(0, 0, 0, 0.018) 0px,
+            rgba(0, 0, 0, 0.018) 2px,
+            rgba(255, 255, 255, 0) 2px,
+            rgba(255, 255, 255, 0) 9px
+        ),
+        /* very subtle horizontal "notebook" bands */
+        repeating-linear-gradient(
+            0deg,
+            rgba(0, 0, 0, 0.012) 0px,
+            rgba(0, 0, 0, 0.012) 1px,
+            rgba(255, 255, 255, 0) 1px,
+            rgba(255, 255, 255, 0) 28px
+        ),
+        /* base paper tone (warm, not harsh white) */
+        linear-gradient(180deg, rgba(255, 252, 246, 0.92), rgba(250, 246, 238, 0.92));
+    box-shadow: var(--shadow-elev-2);
+    overflow: hidden;
+    position: relative;
+}
+
+.wos-notepad-editor {
+    width: 100%;
+    height: 100%;
+    padding: var(--spacing-2xl);
+    box-sizing: border-box;
+    outline: none;
+    border: 0;
+    overflow: auto;
+    /* Large, comfy text */
+    font-family: var(--font-family);
+    font-size: var(--font-size-3xl);
+    line-height: 1.25;
+    /* Default typing color (actual color is controlled by foreColor execCommand) */
+    color: #111;
+    /* Allow smooth touch scrolling in the paper */
+    touch-action: pan-y;
+    -webkit-user-select: text;
+    user-select: text;
+    /* Avoid big iOS-style callouts if any */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove "empty" look while still being label-free */
+.wos-notepad-editor:empty::before {
+    content: '✍️';
+    opacity: 0.25;
+}
+
+/* Top-right emoji "touchbar" strip */
+.wos-notepad-emoji-strip {
+    position: absolute;
+    top: var(--spacing-xl);
+    right: var(--spacing-xl);
+    /* Keep clear of the universal Home button area (top-left) */
+    left: calc(var(--size-home-button) + (var(--spacing-3xl)));
+    height: 92px;
+    border-radius: var(--radius-2xl);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
+    box-shadow: var(--shadow-elev-1);
+    overflow: hidden;
+    pointer-events: auto;
+    z-index: 5; /* ensure it's above paper (and feels tappable) */
+}
+
+.wos-notepad-emoji-strip-inner {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--spacing-md);
+    padding: 10px var(--spacing-lg);
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* Native horizontal swipe/scroll (now that we start at scrollLeft=0) */
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
+}
+
+.wos-notepad-emoji-strip-inner::-webkit-scrollbar {
+    display: none;
+}
+
+.wos-notepad-controls {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+}
+
+.wos-notepad-card {
+    border-radius: var(--radius-2xl);
+    background: var(--color-glass-strong);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
+    box-shadow: var(--shadow-elev-1);
+    padding: var(--spacing-lg);
+    box-sizing: border-box;
+}
+
+.wos-notepad-swatches {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+    justify-content: flex-start;
+    overflow: hidden;
+}
+
+.wos-notepad-swatch {
+    width: 64px;
+    height: 64px;
+    min-width: var(--touch-target-comfortable);
+    min-height: var(--touch-target-comfortable);
+    border-radius: var(--radius-full);
+    border: 4px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+}
+
+.wos-notepad-swatch:active {
+    transform: scale(0.96);
+}
+
+.wos-notepad-swatch--active {
+    border-color: #ffffff;
+    box-shadow:
+        0 0 0 6px rgba(255, 255, 255, 0.35),
+        0 10px 18px rgba(0, 0, 0, 0.20);
+}
+
+.wos-notepad-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.wos-notepad-action {
+    width: 80px;
+    height: 80px;
+    min-width: var(--touch-target-comfortable);
+    min-height: var(--touch-target-comfortable);
+    border-radius: var(--radius-xl);
+    border: 0;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.22);
+    color: var(--color-text);
+    box-shadow: var(--shadow-elev-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    line-height: 1;
+}
+
+.wos-notepad-action:active {
+    transform: scale(0.98);
+}
+
+.wos-notepad-emoji {
+    width: 72px;
+    height: 72px;
+    min-width: var(--touch-target-comfortable);
+    min-height: var(--touch-target-comfortable);
+    flex: 0 0 auto; /* guarantee overflow so the strip is scrollable */
+    border-radius: var(--radius-xl);
+    border: 0;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.28);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    line-height: 1;
+}
+
+.wos-notepad-emoji:active {
+    transform: scale(0.98);
+}
+

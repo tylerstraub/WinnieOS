@@ -1,19 +1,12 @@
 * text=auto
 
-*.js text eol=lf
-*.css text eol=lf
-*.html text eol=lf
-*.json text eol=lf
-
-* text=auto
-
-# Keep web assets consistent across platforms (avoid CRLF/LF churn)
+# Keep text/source files consistent across platforms (avoid CRLF/LF churn)
 *.js   text eol=lf
 *.css  text eol=lf
 *.html text eol=lf
-*.md   text eol=lf
 *.json text eol=lf
+*.md   text eol=lf
 
-# PowerShell scripts are typically CRLF-friendly on Windows
+# PowerShell scripts typically behave best with CRLF on Windows
 *.ps1  text eol=crlf
 

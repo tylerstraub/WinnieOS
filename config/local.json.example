@@ -17,10 +17,11 @@
   },
   "apps": {
     "enabled": [
+      "notepad",
+      "colors",
       "animals",
       "blocks",
-      "bubbles",
-      "colors"
+      "bubbles"
     ]
   }
 }

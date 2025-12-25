@@ -46,7 +46,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 **JavaScript (ES Modules):**
 - `src/js/core/display.js` - Reference resolution owner
-- `src/js/core/viewport.js` - Viewport scaling (fills directly at 1280x800, scales on other resolutions)
+- `src/js/core/viewport.js` - Viewport scaling (scales/centers canvas to fit viewport, maintains aspect ratio)
 - `src/js/core/kiosk.js` - Kiosk mode protections
 - `src/js/core/config.js` - Runtime config loader (fetches `/winnieos-config.json`)
 - `src/js/core/index.js` - Core initialization
@@ -77,8 +77,8 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 - Canvas (`#winnieos-canvas`) is ALWAYS the **active reference resolution** in px (default: 1280x800). It never follows the real device viewport.
 - All UI elements use px units (designed for 1280x800)
-- At exact reference resolution (1280x800): canvas fills viewport directly using `position: fixed` with `100%` width/height
-- On other resolutions: canvas scales proportionally using CSS `transform: scale()` maintaining aspect ratio
+- Canvas is scaled/centered via CSS `transform: scale()` and pixel offsets (maintains aspect ratio, letterbox/pillarbox as needed)
+- At exact reference resolution (1280x800): scale = 1.0 and offsets = 0, so canvas fills viewport perfectly
 
 **DO NOT:**
 - Use viewport units (vw/vh) inside canvas
@@ -196,7 +196,7 @@ window.WinnieOS = {
 **Adding an App (preferred extension path):**
 1. Create: `src/js/apps/<appId>/app.js`
 2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
-3. Add icon asset in `public/assets/images/apps/...` (optional)
+3. (Optional) Add `iconEmoji` (e.g., `iconEmoji: '📝'`) or `iconSrc` (path to image in `public/assets/images/apps/...`)
 4. Add app ID to `config/default.json` → `apps.enabled` array (or it will be auto-enabled)
 5. Build and commit `dist/`
 
@@ -343,6 +343,8 @@ The architecture is designed to scale from a simple welcome screen to a full "pr
 
 ## Current Apps
 
-Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Current apps include:
+Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Currently enabled by default:
+- `notepad` - Rich text editor with color picker and emoji palette (toddler-first, auto-saves locally)
 - `colors` - Radial color picker for changing background color (uses Background utility)
-- `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story` - Various educational apps
+
+Additional apps exist as stubs (placeholders for future development): `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story`. These can be enabled by adding their IDs to `config/default.json` → `apps.enabled`.
