@@ -5,34 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WinnieOS</title>
     <style>
+        /* Base viewport - full screen */
         body {
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            background: #1a1a1a; /* Background for letterboxing areas */
+        }
+
+        /* Design canvas - designed at 1280x800 (16:10 reference resolution) */
+        #winnieos-canvas {
+            width: 1280px;
+            height: 800px;
+            position: relative;
+            transform-origin: center center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: white;
         }
+
+        /* Example content - all sizing relative to 1280x800 canvas */
         .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-align: center;
         }
+
         h1 {
-            font-size: 4rem;
+            font-size: 80px; /* Sized for 1280px width */
             margin: 0;
         }
+
         p {
-            font-size: 1.5rem;
-            margin-top: 1rem;
+            font-size: 32px; /* Sized for 1280px width */
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>WinnieOS</h1>
-        <p>Welcome! 🐻</p>
+    <div id="winnieos-canvas">
+        <div class="container">
+            <h1>WinnieOS</h1>
+            <p>Welcome! 🐻</p>
+        </div>
     </div>
+
+    <script>
+        // Scaling system: scales 1280x800 design to fit any viewport
+        (function() {
+            const DESIGN_WIDTH = 1280;
+            const DESIGN_HEIGHT = 800;
+            const canvas = document.getElementById('winnieos-canvas');
+
+            function updateScale() {
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                // Calculate scale to fit viewport (maintains aspect ratio)
+                const scaleX = viewportWidth / DESIGN_WIDTH;
+                const scaleY = viewportHeight / DESIGN_HEIGHT;
+                const scale = Math.min(scaleX, scaleY);
+
+                // Apply scale transform
+                canvas.style.transform = `scale(${scale})`;
+            }
+
+            // Update on load and resize
+            updateScale();
+            window.addEventListener('resize', updateScale);
+        })();
+    </script>
 </body>
 </html>
