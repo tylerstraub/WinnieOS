@@ -121,18 +121,24 @@ Background.save('#ff0000');
 const saved = Background.getSaved();
 ```
 
-### Audio Utility (for games)
+### Audio Utility
 
 ```javascript
 import { Audio } from '../../utils/audio.js';
 
-// Unlock on first user gesture
+// Prepare audio graph early (in mount)
+Audio.ensure();
+
+// Unlock on first user gesture (call before playing sounds)
 Audio.unlock();
 
 // Play sound cues
-Audio.launch(0.8);
-Audio.bounce(0.5, 'peg');
-Audio.reward('blue', 0.7);
+Audio.launch(0.8);        // App launch
+Audio.tick();             // Subtle tap
+Audio.pop(0.6);           // Emoji/reveal
+Audio.type(0.3, 'alpha'); // Typing sound
+Audio.poof(0.7);          // Clear/close
+Audio.buzz(0.5);          // Error state
 ```
 
 ## Build + deploy (important)

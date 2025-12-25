@@ -193,7 +193,7 @@ window.WinnieOS = {
     Utils: {                // Utility functions
         Storage: { ... },    // LocalStorage wrapper for persistence
         Background: { ... }, // Background color management
-        Audio: { ... }       // Web Audio API toy synth (for games)
+        Audio: { ... }       // Web Audio API sound system (UI feedback, navigation, games)
     }
 }
 ```
@@ -215,12 +215,12 @@ window.WinnieOS = {
 - `index.js` - Utility namespace
 - `storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
 - `background.js` - Background color management (`WinnieOS.Utils.Background`)
-- `audio.js` - Web Audio API toy synth for games (`WinnieOS.Utils.Audio`)
+- `audio.js` - Web Audio API sound system (`WinnieOS.Utils.Audio`) - UI feedback, navigation cues, game sounds
 
 **Games (`js/games/`):**
-- Game modules follow a `createGame({ root, config, audio }) -> { start(), dispose() }` pattern
+- Game modules follow a `createGame({ root, config }) -> { start(), dispose() }` pattern
 - Games are full-screen, always start fresh when re-entered
-- Example: `letters` - 2D physics pachinko-style letter matching game
+- Example: `letters` - 2D physics pachinko-style letter matching game (uses Matter.js and Audio utility)
 
 **Loading Order (in `src/main.js`):**
 1. Core modules (`display.js`, `viewport.js`, `kiosk.js`)
@@ -541,7 +541,7 @@ Background.load();
 
 #### Audio Utility
 
-Synthetic sound generation for games using Web Audio API:
+Synthetic sound generation using Web Audio API. Used throughout WinnieOS for UI feedback, navigation cues, and game sounds.
 
 **Import:**
 ```javascript
@@ -549,27 +549,38 @@ import { Audio } from '../utils/audio.js';
 // Or access via namespace: window.WinnieOS.Utils.Audio
 ```
 
-**Usage:**
+**Basic Usage:**
 ```javascript
+// Prepare audio graph (call early, e.g., in mount)
+Audio.ensure();
+
 // Unlock audio context (call on first user gesture)
 Audio.unlock();
 
 // Play sound cues
-Audio.launch(0.8);           // Launch sound
-Audio.bounce(0.5, 'peg');    // Physics bounce
-Audio.reward('blue', 0.7);   // Color-specific reward
-Audio.scoreTick(0.6);        // Score increment
-Audio.star(0.9);             // Star earned celebration
+Audio.launch(0.8);           // App launch / letter launch
+Audio.tick();                // Subtle tap/click
+Audio.pop(0.6);              // Emoji insert / reveal
+Audio.plink(0.4);            // Color swatch selection
+Audio.type(0.3, 'alpha');    // Typing sound (strength, flavor)
+Audio.poof(0.7);             // Clear/close action
+Audio.buzz(0.5);             // Error/placeholder state
+
+// Continuous drag tone (Colors app)
+Audio.colorDragStart();
+Audio.colorDragUpdate({ hue: 180, t: 0.5, speed: 0.3 });
+Audio.colorDragStop();
 
 // Master volume control (preserves dynamics)
 Audio.setMasterLevel(0.8);   // 0..1 range
 ```
 
 **Features:**
-- Physics-reactive sounds (velocity-driven loudness/brightness)
+- Master mix bus with global level control
+- Unlock-on-first-gesture pattern (browser autoplay policy)
 - Rate limiting to prevent overstimulation
-- Master gain control with perceptual dB mapping
 - Safe peak limiting (transparent brickwall)
+- Physics-reactive sounds for games (velocity-driven)
 
 ## Production Deployment
 

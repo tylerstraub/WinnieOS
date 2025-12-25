@@ -60,7 +60,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `src/js/utils/index.js` - Utility functions namespace
 - `src/js/utils/storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
 - `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
-- `src/js/utils/audio.js` - Web Audio API toy synth (`WinnieOS.Utils.Audio`)
+- `src/js/utils/audio.js` - Web Audio API sound system (`WinnieOS.Utils.Audio`) - UI feedback, navigation cues, game sounds
 - `src/js/games/` - Game modules (e.g., `letters/game.js`)
 
 **Build Output:**
@@ -121,7 +121,7 @@ window.WinnieOS = {
     Utils: {                // Utility functions
         Storage: { ... },    // LocalStorage wrapper for persistence
         Background: { ... }, // Background color management
-        Audio: { ... }       // Web Audio API toy synth (for games)
+        Audio: { ... }       // Web Audio API sound system (UI feedback, navigation, games)
     }
 }
 ```
@@ -223,7 +223,7 @@ window.WinnieOS = {
 4. Examples:
    - `src/js/utils/storage.js` - LocalStorage wrapper (`WinnieOS.Utils.Storage`)
    - `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
-   - `src/js/utils/audio.js` - Web Audio API toy synth (`WinnieOS.Utils.Audio`)
+   - `src/js/utils/audio.js` - Web Audio API sound system (`WinnieOS.Utils.Audio`) - UI feedback, navigation cues, game sounds
 
 ### Changing Server Configuration
 
@@ -350,8 +350,8 @@ The architecture is designed to scale from a simple welcome screen to a full "pr
 ## Current Apps
 
 Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Currently enabled by default:
-- `notepad` - Rich text editor with color picker and emoji palette (toddler-first, auto-saves locally)
-- `letters` - 2D physics pachinko-style letter matching game (uses Matter.js and Audio utility)
-- `colors` - Radial color picker for changing background color (uses Background utility)
+- `notepad` - Rich text editor with color picker and emoji palette (toddler-first, auto-saves locally, typing sounds)
+- `letters` - 2D physics pachinko-style letter matching game (uses Matter.js, full audio integration)
+- `colors` - Radial color picker for changing background color (uses Background utility, continuous tonal drag sound)
 
 Additional apps exist as stubs (placeholders for future development): `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story`. These can be enabled by adding their IDs to `config/default.json` → `apps.enabled`.
