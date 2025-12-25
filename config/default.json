@@ -12,5 +12,22 @@
   "logging": {
     "level": "info",
     "filename": "logs/winnieos.log"
+  },
+  "apps": {
+    "enabled": [
+      "animals",
+      "blocks",
+      "bubbles",
+      "colors",
+      "dance",
+      "garden",
+      "memory",
+      "music",
+      "numbers",
+      "paint",
+      "piano",
+      "shapes",
+      "story"
+    ]
   }
 }

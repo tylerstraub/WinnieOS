@@ -11,6 +11,16 @@
     touch-action: pan-y;
 }
 
+.wos-desktop--centered {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.wos-desktop-inner {
+    width: 100%;
+}
+
 .wos-app-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);

@@ -14,5 +14,22 @@
   },
   "chromium": {
     "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  },
+  "apps": {
+    "enabled": [
+      "animals",
+      "blocks",
+      "bubbles",
+      "colors",
+      "dance",
+      "garden",
+      "memory",
+      "music",
+      "numbers",
+      "paint",
+      "piano",
+      "shapes",
+      "story"
+    ]
   }
 }

@@ -47,11 +47,12 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `src/js/core/display.js` - Reference resolution owner
 - `src/js/core/viewport.js` - Viewport scaling (fills directly at 1280x800, scales on other resolutions)
 - `src/js/core/kiosk.js` - Kiosk mode protections
+- `src/js/core/config.js` - Runtime config loader (fetches `/winnieos-config.json`)
 - `src/js/core/index.js` - Core initialization
 - `src/js/nav/navigation.js` - Navigation state machine (startup/desktop/app)
 - `src/js/shell/` - Always-mounted shell (Home button + content host)
 - `src/js/screens/` - Screens (Startup/Desktop/AppHost)
-- `src/js/apps/` - Apps plug-ins (auto-discovered by Vite)
+- `src/js/apps/` - Apps plug-ins (auto-discovered by Vite, filtered by config)
 - `src/js/components/index.js` - Component registry namespace
 - `src/js/components/` - Individual component modules (as features are added)
 - `src/js/utils/index.js` - Utility functions namespace
@@ -106,10 +107,11 @@ window.WinnieOS = {
     Display: { ... },       // Reference resolution owner
     Viewport: { ... },      // Viewport scaling
     Kiosk: { ... },         // Kiosk protections
+    Config: { ... },        // Runtime config loader
     Navigation: { ... },    // Navigation state (startup/desktop/app)
     Shell: { ... },         // Always-mounted UI shell
     Screens: { ... },       // Screen registry
-    Apps: { ... },          // App registry (auto-discovered)
+    Apps: { ... },          // App registry (auto-discovered, filtered by config)
     Components: { ... },    // Component registry
     Utils: { ... }          // Utility functions
 }
@@ -154,6 +156,10 @@ window.WinnieOS = {
   - Server port/host
   - Logging level
   - Chromium executable path (auto-detected if not set)
+  - Display reference resolution (default: 1280x800)
+  - Apps enabled list (`apps.enabled` array)
+- Runtime config exposed at `/winnieos-config.json` (safe subset for frontend)
+- Frontend loads config via `WinnieOS.Config.load()` (cached, async)
 
 ## Key Scripts
 
@@ -181,7 +187,8 @@ window.WinnieOS = {
 1. Create: `src/js/apps/<appId>/app.js`
 2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
 3. Add icon asset in `public/assets/images/apps/...` (optional)
-4. Build and commit `dist/`
+4. Add app ID to `config/default.json` → `apps.enabled` array (or it will be auto-enabled)
+5. Build and commit `dist/`
 
 **Adding a Component:**
 1. Create CSS file: `src/css/components/my-component.css`

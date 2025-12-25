@@ -8,7 +8,8 @@ const __dirname = dirname(__filename);
 // Load configuration for dev server + frontend runtime defaults
 let config = {
   server: { port: 3000, host: 'localhost' },
-  display: { reference: { width: 1280, height: 800 } }
+  display: { reference: { width: 1280, height: 800 } },
+  apps: { enabled: [] }
 };
 try {
   const defaultConfig = JSON.parse(readFileSync(resolve(__dirname, 'config/default.json'), 'utf-8'));
@@ -21,7 +22,8 @@ try {
   }
   config = {
     server: { ...defaultConfig.server, ...(localConfig.server || {}) },
-    display: { ...defaultConfig.display, ...(localConfig.display || {}) }
+    display: { ...defaultConfig.display, ...(localConfig.display || {}) },
+    apps: { ...defaultConfig.apps, ...(localConfig.apps || {}) }
   };
 } catch {
   // Use defaults if config files don't exist
@@ -38,7 +40,7 @@ export default {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.setHeader('Cache-Control', 'no-store');
-          res.end(JSON.stringify({ display: config.display }));
+          res.end(JSON.stringify({ display: config.display, apps: config.apps }));
         });
       }
     }

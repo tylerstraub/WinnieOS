@@ -5,7 +5,10 @@
  * - `src/js/apps/<appId>/app.js`
  *
  * Vite auto-registers these modules via `import.meta.glob`.
+ * Apps can be enabled/disabled via config/apps.enabled array.
  */
+
+import { RuntimeConfig } from '../core/config.js';
 
 function normalizeApp(def) {
     if (!def || typeof def !== 'object') return null;
@@ -43,6 +46,28 @@ Object.keys(modules).forEach((path) => {
     appsById.set(app.id, app);
 });
 
+// Cache for enabled app IDs from config (null = not loaded yet, Set = loaded)
+let enabledAppIds = null;
+
+async function loadEnabledAppIds() {
+    if (enabledAppIds !== null) return enabledAppIds;
+    
+    try {
+        const config = await RuntimeConfig.load();
+        if (config && config.apps && Array.isArray(config.apps.enabled)) {
+            enabledAppIds = new Set(config.apps.enabled.map(id => String(id).trim()).filter(Boolean));
+        } else {
+            // No config or invalid config - enable all apps (backward compatible)
+            enabledAppIds = new Set(appsById.keys());
+        }
+    } catch (err) {
+        console.warn('WinnieOS.Apps: failed to load config, enabling all apps', err);
+        enabledAppIds = new Set(appsById.keys());
+    }
+    
+    return enabledAppIds;
+}
+
 function listSorted() {
     return Array.from(appsById.values()).sort((a, b) => {
         if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
@@ -50,12 +75,50 @@ function listSorted() {
     });
 }
 
+function listSortedFiltered(enabledSet) {
+    if (!enabledSet) {
+        // Config not loaded yet - return all apps (backward compatible)
+        return listSorted();
+    }
+    return listSorted().filter(app => enabledSet.has(app.id));
+}
+
+// Load config eagerly (don't await - it will be available when needed)
+if (typeof window !== 'undefined') {
+    loadEnabledAppIds().catch(() => {
+        // Already handled in loadEnabledAppIds
+    });
+}
+
 export const Apps = {
     list: function() {
+        // If config is loaded, filter; otherwise return all (will be filtered on next call)
+        if (enabledAppIds !== null) {
+            return listSortedFiltered(enabledAppIds);
+        }
+        // Config not loaded yet - return all apps
+        // Trigger async load for next time
+        loadEnabledAppIds().catch(() => {});
         return listSorted();
     },
     get: function(id) {
-        return appsById.get(String(id || '')) || null;
+        const app = appsById.get(String(id || '')) || null;
+        if (!app) return null;
+        
+        // If config is loaded, check if app is enabled
+        if (enabledAppIds !== null && !enabledAppIds.has(app.id)) {
+            return null; // App is disabled
+        }
+        
+        return app;
+    },
+    /**
+     * Refresh the enabled apps list from config.
+     * Useful after config changes.
+     */
+    refreshConfig: async function() {
+        enabledAppIds = null;
+        await loadEnabledAppIds();
     }
 };
 

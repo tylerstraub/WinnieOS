@@ -63,13 +63,16 @@ export const StartupScreen = (function() {
             rootEl = document.createElement('div');
             rootEl.className = 'wos-startup';
             rootEl.innerHTML = `
-                <img class="wos-startup-logo" src="${LOGO_SRC}" alt="WinnieOS" />
-                <div class="wos-startup-title">WinnieOS</div>
-                <div class="wos-startup-status">
-                    <span data-wos-startup-status>Starting up</span>
-                    <span class="wos-startup-dots" aria-hidden="true">
-                        <span>.</span><span>.</span><span>.</span>
-                    </span>
+                <div class="wos-startup-logo-layer">
+                    <img class="wos-startup-logo" src="${LOGO_SRC}" alt="WinnieOS" />
+                </div>
+                <div class="wos-startup-text-layer">
+                    <div class="wos-startup-status">
+                        <span data-wos-startup-status>Starting up</span>
+                        <span class="wos-startup-dots" aria-hidden="true">
+                            <span>.</span><span>.</span><span>.</span>
+                        </span>
+                    </div>
                 </div>
             `;
             root.replaceChildren(rootEl);

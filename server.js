@@ -18,7 +18,8 @@ if (fs.existsSync(localConfigPath)) {
 const config = {
   server: { ...defaultConfig.server, ...(localConfig.server || {}) },
   logging: { ...defaultConfig.logging, ...(localConfig.logging || {}) },
-  display: { ...defaultConfig.display, ...(localConfig.display || {}) }
+  display: { ...defaultConfig.display, ...(localConfig.display || {}) },
+  apps: { ...defaultConfig.apps, ...(localConfig.apps || {}) }
 };
 
 // Ensure logs directory exists
@@ -71,7 +72,8 @@ app.get('/winnieos-config.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.status(200).send(JSON.stringify({
-    display: config.display
+    display: config.display,
+    apps: config.apps
   }));
 });
 

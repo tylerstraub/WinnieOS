@@ -74,6 +74,7 @@ WinnieOS/
 │   ├── restart.ps1       # Remote restart script
 │   ├── setup-task-scheduler.ps1 # Task Scheduler setup script
 │   ├── launch-dev-kiosk.ps1 # Development kiosk launcher
+│   ├── stop-dev.ps1 # Stop development server and browser
 │   └── debug-startup.ps1 # Debug script for startup issues
 ├── logs/                 # Application logs (gitignored)
 │   └── winnieos.log
@@ -181,10 +182,11 @@ window.WinnieOS = {
     Display: { ... },      // Reference resolution owner
     Viewport: { ... },      // Viewport scaling
     Kiosk: { ... },         // Kiosk protections
+    Config: { ... },         // Runtime config loader
     Navigation: { ... },    // Navigation state (startup/desktop/app)
     Shell: { ... },         // Always-mounted UI shell (Home + screen host)
     Screens: { ... },       // Screen registry (Startup/Desktop/AppHost)
-    Apps: { ... },          // App registry (auto-discovered)
+    Apps: { ... },          // App registry (auto-discovered, filtered by config)
     Components: { ... },    // Reusable UI components (optional)
     Utils: { ... }          // Utility functions
 }
@@ -194,6 +196,7 @@ window.WinnieOS = {
 - `display.js` - Reference resolution owner (virtual computer resolution), persists and broadcasts changes
 - `viewport.js` - Scales/centers the reference canvas into the real device viewport (letterbox/pillarbox)
 - `kiosk.js` - Kiosk mode protections (blocks navigation, prevents interactions)
+- `config.js` - Runtime config loader (fetches `/winnieos-config.json` for frontend)
 - `index.js` - Core initialization (runs on DOM ready)
 
 **UI Foundation (startup → desktop → apps):**
@@ -242,7 +245,13 @@ window.WinnieOS = {
 - **`config/default.json`**: Default settings (committed to repo)
 - **`config/local.json`**: Local overrides (gitignored, not synced)
 - Configuration is merged: local overrides default values
-- Server port, host, logging level, and Chromium path can be configured
+- Configurable settings:
+  - Server port/host (default: 3000/localhost)
+  - Logging level (default: info)
+  - Chromium executable path (auto-detected if not set)
+  - Display reference resolution (default: 1280x800)
+  - Apps enabled list (`apps.enabled` array) - controls which apps appear on desktop
+- Runtime config exposed at `/winnieos-config.json` for frontend (safe subset)
 
 #### Windows Service
 
@@ -399,7 +408,8 @@ See `DAD.md` for the full guide. Short version:
 1. Create: `src/js/apps/<appId>/app.js`
 2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
 3. (Optional) Add an icon in `public/assets/images/apps/...` and use `iconSrc`
-4. Build and commit `dist/` for production updates
+4. (Optional) Add app ID to `config/default.json` → `apps.enabled` array (if omitted, app is auto-enabled)
+5. Build and commit `dist/` for production updates
 
 ### Adding a New Component
 
@@ -574,17 +584,37 @@ Edit `config/local.json`:
   },
   "chromium": {
     "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  },
+  "apps": {
+    "enabled": [
+      "animals",
+      "blocks",
+      "bubbles",
+      "colors",
+      "dance",
+      "garden",
+      "memory",
+      "music",
+      "numbers",
+      "paint",
+      "piano",
+      "shapes",
+      "story"
+    ]
   }
 }
 ```
 
 - **port**: Server port (default: 3000)
 - **host**: Server hostname (default: localhost)
-- **display.reference.width/height**: Default “virtual computer” reference resolution (used only if the user has not persisted a reference size in localStorage)
+- **display.reference.width/height**: Default "virtual computer" reference resolution (used only if the user has not persisted a reference size in localStorage)
 - **logging.level**: Log level (info, warn, error, debug)
 - **chromium.path**: Path to Chromium/Chrome executable
+- **apps.enabled**: Array of app IDs to enable on desktop (if omitted, all discovered apps are enabled)
 
 If `chromium.path` is not specified, `start.ps1` will attempt to auto-detect common installation paths.
+
+If `apps.enabled` is not specified, all discovered apps are enabled (backward compatible).
 
 ### Windows Service Management
 

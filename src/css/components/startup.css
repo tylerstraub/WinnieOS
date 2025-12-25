@@ -6,27 +6,41 @@
 .wos-startup {
     width: 100%;
     height: 100%;
+    position: relative;
+}
+
+/* Logo layer - occupies full viewport, positioned independently */
+.wos-startup-logo-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-2xl);
+    z-index: 1;
 }
 
 .wos-startup-logo {
     width: var(--size-startup-logo);
     height: var(--size-startup-logo);
     object-fit: contain;
-    /* Compensate for transparent padding inside the logo PNG. */
-    margin-bottom: calc(-1 * var(--spacing-2xl));
     filter: var(--logo-shadow-filter);
     animation: wos-startup-float 1400ms ease-in-out infinite;
 }
 
-.wos-startup-title {
-    font-size: var(--font-size-5xl);
-    letter-spacing: var(--tracking-wide);
+/* Text layer - positioned independently above logo layer */
+.wos-startup-text-layer {
+    position: absolute;
+    bottom: var(--spacing-4xl);
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    z-index: 2;
 }
 
 .wos-startup-status {
