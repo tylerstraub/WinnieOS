@@ -56,20 +56,53 @@
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
             
-            // Calculate scale factors for both dimensions
-            const scaleX = viewportWidth / REF_WIDTH;
-            const scaleY = viewportHeight / REF_HEIGHT;
+            // Check if we're at or very close to reference resolution
+            // Use small tolerance (2px) to account for browser chrome/scrollbars
+            const isReferenceResolution = Math.abs(viewportWidth - REF_WIDTH) <= 2 && 
+                                         Math.abs(viewportHeight - REF_HEIGHT) <= 2;
             
-            // Use minimum scale to ensure canvas fits entirely in viewport
-            // This maintains aspect ratio and prevents overflow
-            const scale = Math.min(scaleX, scaleY);
-            
-            // Apply scale transform
-            // Transform origin is center (set in CSS), so canvas scales from center
-            canvasElement.style.transform = `scale(${scale})`;
-            
-            // Store scale value for potential use by other modules
-            canvasElement.dataset.scale = scale.toFixed(4);
+            if (isReferenceResolution) {
+                // At reference resolution: fill viewport directly, no transform needed
+                canvasElement.style.transform = 'none';
+                canvasElement.style.position = 'fixed';
+                canvasElement.style.top = '0';
+                canvasElement.style.left = '0';
+                canvasElement.style.width = '100vw';
+                canvasElement.style.height = '100vh';
+                canvasElement.style.margin = '0';
+                document.body.style.display = 'block';
+                document.body.style.justifyContent = 'normal';
+                document.body.style.alignItems = 'normal';
+                canvasElement.dataset.scale = '1.0000';
+            } else {
+                // For other resolutions: use flexbox centering and scale transform
+                document.body.style.display = 'flex';
+                document.body.style.justifyContent = 'center';
+                document.body.style.alignItems = 'center';
+                
+                // Reset canvas to reference size (remove inline styles to let CSS take over)
+                canvasElement.style.position = '';
+                canvasElement.style.width = '';
+                canvasElement.style.height = '';
+                canvasElement.style.top = '';
+                canvasElement.style.left = '';
+                canvasElement.style.margin = '';
+                
+                // Calculate scale factors for both dimensions
+                const scaleX = viewportWidth / REF_WIDTH;
+                const scaleY = viewportHeight / REF_HEIGHT;
+                
+                // Use minimum scale to ensure canvas fits entirely in viewport
+                // This maintains aspect ratio and prevents overflow
+                const scale = Math.min(scaleX, scaleY);
+                
+                // Apply scale transform
+                // Transform origin is center (set in CSS), so canvas scales from center
+                canvasElement.style.transform = `scale(${scale})`;
+                
+                // Store scale value for potential use by other modules
+                canvasElement.dataset.scale = scale.toFixed(4);
+            }
         }
 
         // Public API
