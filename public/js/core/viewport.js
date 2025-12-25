@@ -55,39 +55,86 @@
 
             const viewportWidth = window.innerWidth;
             const viewportHeight = window.innerHeight;
+            const screenWidth = screen.width;
+            const screenHeight = screen.height;
             
-            // Check if we're at or very close to reference resolution
-            // Use tolerance (10px) to account for browser chrome, scrollbars, and rounding
-            // This ensures native resolution devices fill properly even with browser UI
-            const isReferenceResolution = Math.abs(viewportWidth - REF_WIDTH) <= 10 && 
-                                         Math.abs(viewportHeight - REF_HEIGHT) <= 10;
+            // Check if we're at reference resolution using multiple methods:
+            // 1. Check screen dimensions (most reliable for native resolution)
+            // 2. Check viewport dimensions with tolerance
+            // 3. Use whichever is closer to reference
+            const screenMatchesRef = screenWidth === REF_WIDTH && screenHeight === REF_HEIGHT;
+            const viewportCloseToRef = Math.abs(viewportWidth - REF_WIDTH) <= 15 && 
+                                      Math.abs(viewportHeight - REF_HEIGHT) <= 15;
+            
+            // If screen matches reference OR viewport is very close, use direct fill
+            const isReferenceResolution = screenMatchesRef || viewportCloseToRef;
+            
+            // Debug logging (can be removed in production)
+            console.log('WinnieOS.Viewport: Resolution check', {
+                viewportWidth,
+                viewportHeight,
+                screenWidth,
+                screenHeight,
+                refWidth: REF_WIDTH,
+                refHeight: REF_HEIGHT,
+                screenMatchesRef,
+                viewportCloseToRef,
+                isReferenceResolution,
+                diffWidth: viewportWidth - REF_WIDTH,
+                diffHeight: viewportHeight - REF_HEIGHT
+            });
             
             if (isReferenceResolution) {
                 // At reference resolution: fill viewport directly, no transform needed
                 // Use exact pixel values from window.innerWidth/Height (not vw/vh) 
                 // to avoid scrollbar width issues - these exclude browser chrome
+                
+                // Ensure html and body don't create overflow
+                document.documentElement.style.overflow = 'hidden';
+                document.documentElement.style.width = '100%';
+                document.documentElement.style.height = '100%';
+                document.documentElement.style.margin = '0';
+                document.documentElement.style.padding = '0';
+                
+                document.body.style.display = 'block';
+                document.body.style.width = '100%';
+                document.body.style.height = '100%';
+                document.body.style.justifyContent = 'normal';
+                document.body.style.alignItems = 'normal';
+                document.body.style.overflow = 'hidden';
+                document.body.style.margin = '0';
+                document.body.style.padding = '0';
+                document.body.style.background = 'transparent'; // Don't show body background
+                
+                // Canvas fills viewport exactly using fixed positioning
+                // Use inset: 0 to fill entire viewport, overriding CSS width/height
                 canvasElement.style.transform = 'none';
                 canvasElement.style.position = 'fixed';
-                canvasElement.style.top = '0';
-                canvasElement.style.left = '0';
-                canvasElement.style.width = viewportWidth + 'px';
-                canvasElement.style.height = viewportHeight + 'px';
+                canvasElement.style.setProperty('inset', '0', 'important'); // Force override CSS
+                canvasElement.style.setProperty('width', '100%', 'important'); // Override CSS width
+                canvasElement.style.setProperty('height', '100%', 'important'); // Override CSS height
                 canvasElement.style.margin = '0';
                 canvasElement.style.padding = '0';
                 canvasElement.style.border = 'none';
                 canvasElement.style.boxSizing = 'border-box';
                 canvasElement.style.outline = 'none';
-                document.body.style.display = 'block';
-                document.body.style.justifyContent = 'normal';
-                document.body.style.alignItems = 'normal';
-                document.body.style.overflow = 'hidden';
-                document.documentElement.style.overflow = 'hidden';
                 canvasElement.dataset.scale = '1.0000';
             } else {
                 // For other resolutions: use flexbox centering and scale transform
+                // Reset html/body to allow flexbox centering
+                document.documentElement.style.overflow = '';
+                document.documentElement.style.width = '';
+                document.documentElement.style.height = '';
+                document.documentElement.style.margin = '';
+                document.documentElement.style.padding = '';
+                
                 document.body.style.display = 'flex';
+                document.body.style.width = '';
+                document.body.style.height = '';
                 document.body.style.justifyContent = 'center';
                 document.body.style.alignItems = 'center';
+                document.body.style.margin = '';
+                document.body.style.padding = '';
                 
                 // Reset canvas to reference size (remove inline styles to let CSS take over)
                 canvasElement.style.position = '';
@@ -96,6 +143,10 @@
                 canvasElement.style.top = '';
                 canvasElement.style.left = '';
                 canvasElement.style.margin = '';
+                canvasElement.style.padding = '';
+                canvasElement.style.border = '';
+                canvasElement.style.boxSizing = '';
+                canvasElement.style.outline = '';
                 
                 // Calculate scale factors for both dimensions
                 const scaleX = viewportWidth / REF_WIDTH;
