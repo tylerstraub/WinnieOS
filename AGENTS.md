@@ -54,11 +54,14 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `src/js/shell/` - Always-mounted shell (Home button + content host)
 - `src/js/screens/` - Screens (Startup/Desktop/AppHost)
 - `src/js/apps/` - Apps plug-ins (auto-discovered by Vite, filtered by config)
+- `src/js/games/` - Game modules (full-screen interactive experiences)
 - `src/js/components/index.js` - Component registry namespace
 - `src/js/components/` - Individual component modules (as features are added)
 - `src/js/utils/index.js` - Utility functions namespace
 - `src/js/utils/storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
 - `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
+- `src/js/utils/audio.js` - Web Audio API toy synth (`WinnieOS.Utils.Audio`)
+- `src/js/games/` - Game modules (e.g., `letters/game.js`)
 
 **Build Output:**
 - `dist/` - Production build output (committed, served by Express)
@@ -117,7 +120,8 @@ window.WinnieOS = {
     Components: { ... },    // Component registry
     Utils: {                // Utility functions
         Storage: { ... },    // LocalStorage wrapper for persistence
-        Background: { ... }  // Background color management
+        Background: { ... }, // Background color management
+        Audio: { ... }       // Web Audio API toy synth (for games)
     }
 }
 ```
@@ -219,6 +223,7 @@ window.WinnieOS = {
 4. Examples:
    - `src/js/utils/storage.js` - LocalStorage wrapper (`WinnieOS.Utils.Storage`)
    - `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
+   - `src/js/utils/audio.js` - Web Audio API toy synth (`WinnieOS.Utils.Audio`)
 
 ### Changing Server Configuration
 
@@ -311,7 +316,8 @@ window.WinnieOS = {
    - `src/css/` - Modular CSS files
    - `src/js/core/` - Core systems (ES modules)
    - `src/js/components/` - Component modules (ES modules)
-   - `src/js/utils/` - Utility functions (Storage, Background)
+   - `src/js/utils/` - Utility functions (Storage, Background, Audio)
+   - `src/js/games/` - Game modules (full-screen interactive experiences)
    - `src/js/apps/` - App plug-ins (auto-discovered)
    - `dist/` - Production build output (committed)
    - `public/assets/` - Static assets (images, fonts)
@@ -345,6 +351,7 @@ The architecture is designed to scale from a simple welcome screen to a full "pr
 
 Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Currently enabled by default:
 - `notepad` - Rich text editor with color picker and emoji palette (toddler-first, auto-saves locally)
+- `letters` - 2D physics pachinko-style letter matching game (uses Matter.js and Audio utility)
 - `colors` - Radial color picker for changing background color (uses Background utility)
 
 Additional apps exist as stubs (placeholders for future development): `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story`. These can be enabled by adding their IDs to `config/default.json` → `apps.enabled`.

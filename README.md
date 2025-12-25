@@ -28,6 +28,7 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 - **Logging**: Winston (file-based logging)
 - **Browser**: Chromium/Chrome in kiosk mode
 - **Frontend**: Vanilla JavaScript (ES modules), modular CSS (no frameworks)
+- **Physics**: Matter.js (2D physics engine for games)
 
 ### Project Structure
 
@@ -53,8 +54,9 @@ WinnieOS/
 │       ├── nav/          # Navigation state machine (startup/desktop/app)
 │       ├── screens/      # Startup/Desktop/AppHost screens
 │       ├── apps/         # Apps plug-ins: src/js/apps/<appId>/app.js
+│       ├── games/        # Game modules: src/js/games/<gameId>/game.js
 │       ├── components/   # Reusable UI components
-│       └── utils/        # Utility functions (Storage, Background)
+│       └── utils/        # Utility functions (Storage, Background, Audio)
 ├── public/               # Static assets (copied to dist/ by Vite)
 │   └── assets/           # Static assets
 │       ├── images/       # Image files
@@ -107,11 +109,8 @@ WinnieOS/
 - When viewport matches the active reference size: **scale = 1** and offsets are **0**, so it “locks” perfectly without special-casing
 
 **Debugging**
-- Current scale is exposed as `#winnieos-canvas[data-scale]`
-- The same value is also available as CSS variable `--viewport-scale` on `:root`
- - Additional viewport metrics are exposed as dataset attributes on `#winnieos-canvas`:
-   - `data-vw`, `data-vh`, `data-left`, `data-top`
- - Programmatic access is available via `WinnieOS.Viewport.getMetrics()`
+- Scale: `#winnieos-canvas[data-scale]` or CSS `--viewport-scale`
+- Metrics: `WinnieOS.Viewport.getMetrics()` (reference, viewport, scale, offsets)
 
 **Display Module (Reference Resolution Owner)**
 - `WinnieOS.Display` owns the reference resolution and persists it via `WinnieOS.Utils.Storage`
@@ -193,7 +192,8 @@ window.WinnieOS = {
     Components: { ... },    // Reusable UI components
     Utils: {                // Utility functions
         Storage: { ... },    // LocalStorage wrapper for persistence
-        Background: { ... }  // Background color management
+        Background: { ... }, // Background color management
+        Audio: { ... }       // Web Audio API toy synth (for games)
     }
 }
 ```
@@ -213,13 +213,19 @@ window.WinnieOS = {
 
 **Utilities (`js/utils/`):**
 - `index.js` - Utility namespace
-- `storage.js` - General-purpose localStorage wrapper with JSON serialization (`WinnieOS.Utils.Storage`)
-- `background.js` - Background color management and persistence (`WinnieOS.Utils.Background`)
+- `storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
+- `background.js` - Background color management (`WinnieOS.Utils.Background`)
+- `audio.js` - Web Audio API toy synth for games (`WinnieOS.Utils.Audio`)
+
+**Games (`js/games/`):**
+- Game modules follow a `createGame({ root, config, audio }) -> { start(), dispose() }` pattern
+- Games are full-screen, always start fresh when re-entered
+- Example: `letters` - 2D physics pachinko-style letter matching game
 
 **Loading Order (in `src/main.js`):**
-1. Core modules (`display.js`, `viewport.js`, `kiosk.js`) - ES module imports
-2. Core initialization (`core/index.js`) - loads saved background color on startup
-3. Utilities (`utils/index.js`) - Storage, Background, etc.
+1. Core modules (`display.js`, `viewport.js`, `kiosk.js`)
+2. Core initialization (`core/index.js`)
+3. Utilities (`utils/index.js`) - Storage, Background, Audio
 4. Components (`components/index.js`)
 5. UI foundation (`apps/`, `nav/`, `screens/`, `shell/`)
 
@@ -232,56 +238,29 @@ window.WinnieOS = {
 
 #### Web Server
 
-- **`server.js`**: Production Express.js static file server
-  - Serves files from `dist/` directory (Vite build output)
-  - Uses shared config loader (`lib/config-loader.js`) for configuration
-  - Configurable port (default: 3000)
-  - File-based logging via Winston
-  - Graceful shutdown handling
-  - Used by Windows Service in production
-
-- **Vite Dev Server**: Development server with hot module replacement (HMR)
-  - Started via `npm run dev`
-  - Uses shared config loader (`lib/config-loader.js`) for consistency with production
-  - Automatic browser reloading on file changes
-  - CSS changes inject instantly (no page reload)
-  - Fast ES module loading and HMR
-  - Watches `src/` directory for file changes
-  - Serves from `src/` in development, builds to `dist/` for production
+- **`server.js`**: Express static file server (serves `dist/`, uses shared config loader)
+- **Vite Dev Server**: `npm run dev` - HMR, watches `src/`, serves from source
 
 #### Configuration System
 
 - **`config/default.json`**: Default settings (committed to repo, source of truth)
 - **`config/local.json`**: Local overrides (gitignored, not synced, optional)
-- **`lib/config-loader.js`**: Shared configuration loader module (used by both `server.js` and `vite.config.js`)
-- Configuration loading:
-  - `default.json` is required and auto-created from fallback defaults if missing
-  - `local.json` is optional and not auto-created (use `config/local.json.example` template during setup)
-  - Deep merging: local config overrides default values (nested objects are properly merged)
-  - Both `server.js` and `vite.config.js` use the same loader for consistency
-- Configurable settings:
-  - Server port/host (default: 3000/localhost)
-  - Logging level (default: info)
-  - Chromium executable path (auto-detected if not set)
-  - Display reference resolution (default: 1280x800)
-  - Apps enabled list (`apps.enabled` array) - controls which apps appear on desktop
-- Runtime config exposed at `/winnieos-config.json` for frontend (safe subset)
-- Debug endpoint at `/winnieos-debug.json` (localhost-only) for diagnosing config/dist mismatches in production
+- **`lib/config-loader.js`**: Shared loader (used by `server.js` and `vite.config.js`)
+- Deep merging: `local.json` overrides `default.json` (nested objects merged)
+- Configurable: server port/host, logging level, Chromium path, display reference, apps enabled
+- Runtime config: `/winnieos-config.json` (frontend-safe subset)
 
 #### Windows Service
 
-- Service name: "WinnieOS Server"
-- Runs `server.js` as a Windows Service
-- Auto-starts with Windows (if configured)
-- Managed via `scripts/install-service.js`
+- Service name: "WinnieOS Server" (runs `server.js`, managed via `scripts/install-service.js`)
 
 #### PowerShell Scripts
 
-- **`setup.ps1`**: Initial project setup (dependencies, config, optional service install, builds dist/ if needed)
-- **`start.ps1`**: Startup sequence (git pull, npm install, rebuild dist/, restart service, launch browser). Auto-elevates with UAC prompt if admin privileges needed for service control.
-- **`restart.ps1`**: Remote restart (stop browser/service, then delegate to start.ps1). Auto-elevates with UAC prompt if admin privileges needed.
-- **`install-service.ps1`**: Service installation wrapper (requires admin, builds dist/ if needed, stops service before uninstall)
-- **`setup-task-scheduler.ps1`**: Task Scheduler setup (creates/removes startup task)
+- **`setup.ps1`**: Initial setup (deps, config, optional service install)
+- **`start.ps1`**: Startup (git pull, npm install, rebuild dist/, restart service, launch browser). Auto-elevates if admin needed.
+- **`restart.ps1`**: Remote restart (stops browser/service, runs start.ps1)
+- **`install-service.ps1`**: Service installer wrapper (requires admin)
+- **`setup-task-scheduler.ps1`**: Task Scheduler setup
 
 ## Development Workflow
 
@@ -560,6 +539,38 @@ Background.load();
 - Persists preferences via Storage utility
 - Auto-loads on application startup
 
+#### Audio Utility
+
+Synthetic sound generation for games using Web Audio API:
+
+**Import:**
+```javascript
+import { Audio } from '../utils/audio.js';
+// Or access via namespace: window.WinnieOS.Utils.Audio
+```
+
+**Usage:**
+```javascript
+// Unlock audio context (call on first user gesture)
+Audio.unlock();
+
+// Play sound cues
+Audio.launch(0.8);           // Launch sound
+Audio.bounce(0.5, 'peg');    // Physics bounce
+Audio.reward('blue', 0.7);   // Color-specific reward
+Audio.scoreTick(0.6);        // Score increment
+Audio.star(0.9);             // Star earned celebration
+
+// Master volume control (preserves dynamics)
+Audio.setMasterLevel(0.8);   // 0..1 range
+```
+
+**Features:**
+- Physics-reactive sounds (velocity-driven loudness/brightness)
+- Rate limiting to prevent overstimulation
+- Master gain control with perceptual dB mapping
+- Safe peak limiting (transparent brickwall)
+
 ## Production Deployment
 
 ### Initial Setup on Target Laptop
@@ -672,6 +683,7 @@ Edit `config/local.json`:
   "apps": {
     "enabled": [
       "notepad",
+      "letters",
       "colors"
     ]
   }

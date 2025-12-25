@@ -121,6 +121,20 @@ Background.save('#ff0000');
 const saved = Background.getSaved();
 ```
 
+### Audio Utility (for games)
+
+```javascript
+import { Audio } from '../../utils/audio.js';
+
+// Unlock on first user gesture
+Audio.unlock();
+
+// Play sound cues
+Audio.launch(0.8);
+Audio.bounce(0.5, 'peg');
+Audio.reward('blue', 0.7);
+```
+
 ## Build + deploy (important)
 
 Production serves `dist/` and expects it to be committed.
