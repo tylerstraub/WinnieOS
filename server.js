@@ -49,20 +49,27 @@ const logger = winston.createLogger({
 // Create Express app
 const app = express();
 
-// Serve static files from public directory
-const publicPath = path.join(__dirname, 'public');
-app.use(express.static(publicPath));
-
-// Log all requests
+// Log all requests (must be before static/fallback routes)
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`);
   next();
 });
 
+// Serve static files from dist directory (Vite build output)
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath));
+
+// Fallback to index.html for SPA routing (if needed in future)
+app.use((req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 // Start server
-const server = app.listen(config.server.port, config.server.host, () => {
+// If host is localhost, bind to all interfaces (both IPv4 and IPv6) to ensure Chrome can connect
+const listenHost = config.server.host === 'localhost' ? undefined : config.server.host;
+const server = app.listen(config.server.port, listenHost, () => {
   logger.info(`WinnieOS Server started on http://${config.server.host}:${config.server.port}`);
-  logger.info(`Serving files from: ${publicPath}`);
+  logger.info(`Serving files from: ${distPath}`);
 });
 
 // Graceful shutdown

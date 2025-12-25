@@ -5,12 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WinnieOS</title>
     
-    <!-- CSS: Foundation and Design System -->
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/components.css">
-    
     <style>
         /* ============================================
            WINNIEOS FOUNDATION PRINCIPLES
@@ -31,21 +25,12 @@
     <div id="winnieos-canvas">
         <div class="container">
             <h1>WinnieOS</h1>
-            <p>Welcome! 🐻</p>
+            <p>Welcome winnie!🐻</p>
         </div>
     </div>
 
-    <!-- JavaScript: Core Systems -->
-    <!-- Load order matters: core modules first, then initialization -->
-    <script src="js/core/display.js"></script>
-    <script src="js/core/viewport.js"></script>
-    <script src="js/core/kiosk.js"></script>
-    <script src="js/core/index.js"></script>
-    
-    <!-- JavaScript: Utilities (load before components) -->
-    <script src="js/utils/index.js"></script>
-    
-    <!-- JavaScript: Components (load after utilities) -->
-    <script src="js/components/index.js"></script>
+    <!-- Vite entry point - Vite will replace this with bundled assets in production -->
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>
+

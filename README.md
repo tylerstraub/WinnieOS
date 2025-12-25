@@ -19,56 +19,66 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 ### Technology Stack
 
 - **Runtime**: Node.js (v24.6.0+)
-- **Web Server**: Express.js (static file server)
+- **Web Server**: Express.js (static file server, serves Vite build output)
+- **Build Tool**: Vite (development server with HMR, production builds)
+- **Testing**: Vitest (unit testing framework)
 - **Service Manager**: node-windows (Windows Service integration)
 - **Logging**: Winston (file-based logging)
 - **Browser**: Chromium/Chrome in kiosk mode
-- **Frontend**: Vanilla JavaScript, modular CSS (no frameworks)
+- **Frontend**: Vanilla JavaScript (ES modules), modular CSS (no frameworks)
 
 ### Project Structure
 
 ```
 WinnieOS/
-├── public/                 # Web application files (HTML, CSS, JS)
-│   ├── index.html         # Main entry point
-│   ├── css/               # Modular stylesheets
-│   │   ├── tokens.css     # Design tokens (CSS custom properties)
-│   │   ├── base.css       # Reset, normalize, canvas, kiosk protections
-│   │   ├── layout.css     # Layout utilities and helpers
+├── index.html             # Vite entry point (root)
+├── src/                   # Source files (Vite convention)
+│   ├── main.js           # Application entry point (imports CSS + JS)
+│   ├── css/              # Modular stylesheets
+│   │   ├── tokens.css    # Design tokens (CSS custom properties)
+│   │   ├── base.css      # Reset, normalize, canvas, kiosk protections
+│   │   ├── layout.css    # Layout utilities and helpers
 │   │   ├── components.css # Component styles
-│   │   └── components/    # Individual component CSS files (future)
-│   ├── js/                # Modular JavaScript
-│   │   ├── core/          # Core systems (foundation)
-│   │   │   ├── viewport.js # Viewport scaling system
-│   │   │   ├── kiosk.js    # Kiosk mode protections
-│   │   │   └── index.js    # Core initialization
-│   │   ├── components/    # Component modules (future)
-│   │   │   └── index.js    # Component registry
-│   │   └── utils/         # Utility functions (future)
-│   │       └── index.js    # Utility namespace
-│   └── assets/            # Static assets
-│       ├── images/        # Image files
-│       └── fonts/          # Font files
+│   │   └── components/   # Individual component CSS files (future)
+│   └── js/               # Modular JavaScript (ES modules)
+│       ├── core/         # Core systems (foundation)
+│       │   ├── display.js # Reference resolution owner
+│       │   ├── viewport.js # Viewport scaling system
+│       │   ├── kiosk.js   # Kiosk mode protections
+│       │   └── index.js   # Core initialization
+│       ├── components/   # Component modules (future)
+│       │   └── index.js   # Component registry
+│       └── utils/        # Utility functions (future)
+│           └── index.js   # Utility namespace
+├── public/               # Static assets (copied to dist/ by Vite)
+│   └── assets/           # Static assets
+│       ├── images/       # Image files
+│       └── fonts/        # Font files
+├── dist/                 # Build output (committed, served by Express)
+│   ├── index.html        # Built HTML
+│   └── assets/           # Bundled CSS/JS and static assets
 ├── config/
-│   ├── default.json       # Default configuration (committed)
+│   ├── default.json      # Default configuration (committed)
 │   ├── local.json.example # Template for local config (committed)
-│   └── local.json         # Local overrides (gitignored)
+│   └── local.json        # Local overrides (gitignored)
 ├── scripts/
 │   ├── install-service.js # Node.js script for Windows Service install/uninstall
 │   ├── install-service.ps1 # PowerShell wrapper for service installation
 │   ├── setup.ps1          # Initial setup script
 │   ├── start.ps1          # Startup script (git pull, start service, launch browser)
-│   ├── restart.ps1        # Remote restart script
+│   ├── restart.ps1       # Remote restart script
 │   ├── setup-task-scheduler.ps1 # Task Scheduler setup script
-│   └── debug-startup.ps1  # Debug script for startup issues
-├── logs/                  # Application logs (gitignored)
+│   ├── launch-dev-kiosk.ps1 # Development kiosk launcher
+│   └── debug-startup.ps1 # Debug script for startup issues
+├── logs/                 # Application logs (gitignored)
 │   └── winnieos.log
-├── server.js              # Express web server (production)
-├── server-dev.js          # Development server with hot reload (browser-sync)
-├── package.json           # Node.js dependencies and scripts
-├── README.md              # This file
-├── AGENTS.md              # Context for AI agents
-└── .gitignore            # Git ignore rules
+├── server.js             # Express web server (serves dist/)
+├── vite.config.js        # Vite configuration
+├── vitest.config.js      # Vitest test configuration
+├── package.json          # Node.js dependencies and scripts
+├── README.md             # This file
+├── AGENTS.md             # Context for AI agents
+└── .gitignore           # Git ignore rules
 ```
 
 ### Frontend Architecture
@@ -107,7 +117,7 @@ WinnieOS/
 - Colors: `--color-primary`, `--color-secondary`, `--color-text`
 - Touch targets: `--touch-target-min`, `--touch-target-comfortable`
 - All values in px, designed for 1280x800 reference
-- See `public/css/tokens.css` for complete list
+- See `src/css/tokens.css` for complete list
 
 **Unit System**
 - Use px units for all sizing (designed at 1280x800)
@@ -124,7 +134,7 @@ WinnieOS/
 - `css/components.css` - Component styles and imports
 - `css/components/` - Individual component CSS files (as features are added)
 
-**Loading Order:**
+**Loading Order (in `src/main.js`):**
 1. `tokens.css` - Design tokens must load first
 2. `base.css` - Base styles depend on tokens
 3. `layout.css` - Utilities depend on tokens
@@ -163,29 +173,35 @@ window.WinnieOS = {
 - `index.js` - Utility namespace
 - Future: Shared helper functions (DOM helpers, event helpers, etc.)
 
-**Loading Order:**
-1. Core modules (`display.js`, `viewport.js`, `kiosk.js`)
+**Loading Order (in `src/main.js`):**
+1. Core modules (`display.js`, `viewport.js`, `kiosk.js`) - ES module imports
 2. Core initialization (`core/index.js`)
 3. Utilities (`utils/index.js`)
 4. Components (`components/index.js`)
+
+**Module System:**
+- All JavaScript uses ES modules (`import`/`export`)
+- Modules are imported in `src/main.js` entry point
+- `window.WinnieOS` namespace is preserved for compatibility
 
 ### Key Components
 
 #### Web Server
 
 - **`server.js`**: Production Express.js static file server
-  - Serves files from `public/` directory
+  - Serves files from `dist/` directory (Vite build output)
   - Configurable port (default: 3000)
   - File-based logging via Winston
   - Graceful shutdown handling
   - Used by Windows Service in production
 
-- **`server-dev.js`**: Development server with hot reload
-  - Uses browser-sync for automatic browser reloading
+- **Vite Dev Server**: Development server with hot module replacement (HMR)
+  - Started via `npm run dev`
+  - Automatic browser reloading on file changes
   - CSS changes inject instantly (no page reload)
-  - HTML/JS changes trigger automatic reload
-  - Watches `public/` directory for file changes
-  - Used via `npm run dev` for local development
+  - Fast ES module loading and HMR
+  - Watches `src/` directory for file changes
+  - Serves from `src/` in development, builds to `dist/` for production
 
 #### Configuration System
 
@@ -275,14 +291,20 @@ This will:
    ```powershell
    npm run dev
    ```
-   This uses `server-dev.js` with browser-sync for automatic browser reloading.
+   This starts Vite dev server with HMR (Hot Module Replacement) for instant updates.
 
 2. Access the application:
    - Open browser to `http://localhost:3000`
-   - Make changes to files in `public/`
+   - Make changes to files in `src/`
    - Browser automatically reloads on file changes (CSS changes inject instantly)
 
-3. For production-like server (without hot reload):
+3. Build for production:
+   ```powershell
+   npm run build
+   ```
+   This creates optimized production build in `dist/` directory.
+
+4. Run production server (serves built files):
    ```powershell
    npm start
    ```
@@ -291,7 +313,16 @@ This will:
    node server.js
    ```
 
-4. View logs:
+5. Run tests:
+   ```powershell
+   npm test
+   ```
+   or with UI:
+   ```powershell
+   npm run test:ui
+   ```
+
+6. View logs:
    ```powershell
    Get-Content logs\winnieos.log -Tail 50 -Wait
    ```
@@ -300,9 +331,18 @@ This will:
 
 ### Making Changes
 
-1. Edit files in `public/` directory (HTML, CSS, JavaScript)
-2. Test locally with `npm run dev` (automatic hot reload) or `npm start` (production-like)
-3. Commit changes:
+1. Edit files in `src/` directory (HTML, CSS, JavaScript)
+2. Test locally with `npm run dev` (automatic hot reload with Vite)
+3. Build and test production build:
+   ```powershell
+   npm run build
+   npm start
+   ```
+4. Run tests:
+   ```powershell
+   npm test
+   ```
+5. Commit changes (including `dist/`):
    ```powershell
    git add .
    git commit -m "Description of changes"
@@ -317,7 +357,7 @@ The production laptop will automatically pull updates on startup via `start.ps1`
 
 ### Adding a New Component
 
-1. **Create CSS file**: `public/css/components/my-component.css`
+1. **Create CSS file**: `src/css/components/my-component.css`
    ```css
    .my-component {
        padding: var(--spacing-lg);
@@ -325,27 +365,30 @@ The production laptop will automatically pull updates on startup via `start.ps1`
    }
    ```
 
-2. **Import in `components.css`**:
+2. **Import in `src/css/components.css`**:
    ```css
    @import 'components/my-component.css';
    ```
 
-3. **Create JS file**: `public/js/components/MyComponent.js`
+3. **Create JS file**: `src/js/components/MyComponent.js`
    ```javascript
-   (function() {
-       'use strict';
-       const WinnieOS = window.WinnieOS;
-       
-       WinnieOS.Components.MyComponent = {
-           init: function() { ... }
-       };
-   })();
+   export const MyComponent = {
+       init: function() { ... }
+   };
+
+   // Attach to window namespace for compatibility
+   if (typeof window !== 'undefined') {
+       window.WinnieOS = window.WinnieOS || {};
+       window.WinnieOS.Components = window.WinnieOS.Components || {};
+       window.WinnieOS.Components.MyComponent = MyComponent;
+   }
    ```
 
-4. **Add script tag to `index.html`**:
-   ```html
-   <script src="js/components/MyComponent.js"></script>
+4. **Import in `src/main.js`** (if needed):
+   ```javascript
+   import './js/components/MyComponent.js';
    ```
+   Note: Component registry (`components/index.js`) is already imported in `main.js`
 
 ### Adding a New Screen/Page
 
@@ -356,9 +399,25 @@ The production laptop will automatically pull updates on startup via `start.ps1`
 
 ### Adding a Utility Function
 
-1. Create utility file: `js/utils/my-utility.js`
-2. Add to `WinnieOS.Utils` namespace
-3. Import in `index.html` or use module loader
+1. Create utility file: `src/js/utils/my-utility.js`
+   ```javascript
+   export const myUtility = {
+       helper: function() { ... }
+   };
+
+   // Attach to window namespace for compatibility
+   if (typeof window !== 'undefined') {
+       window.WinnieOS = window.WinnieOS || {};
+       window.WinnieOS.Utils = window.WinnieOS.Utils || {};
+       window.WinnieOS.Utils.myUtility = myUtility;
+   }
+   ```
+
+2. Import in `src/main.js` (if needed):
+   ```javascript
+   import './js/utils/my-utility.js';
+   ```
+   Note: Utility registry (`utils/index.js`) is already imported in `main.js`
 
 ## Production Deployment
 
@@ -547,8 +606,12 @@ Service installation wrapper. Requires Administrator privileges.
 
 ### npm Scripts
 
-- `npm start` - Start the production server (`server.js`)
-- `npm run dev` - Start the development server with hot reload (`server-dev.js`)
+- `npm start` - Start the production server (`server.js`, serves `dist/`)
+- `npm run dev` - Start Vite development server with HMR
+- `npm run build` - Build production bundle to `dist/`
+- `npm run preview` - Preview production build locally
+- `npm test` - Run Vitest test suite
+- `npm run test:ui` - Run Vitest with UI
 - `npm run install-service` - Install Windows Service
 - `npm run uninstall-service` - Uninstall Windows Service
 
@@ -616,8 +679,10 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 
 ### File Organization
 
-- **Web app files**: `public/` directory
-- **Server code**: `server.js` (keep it simple, this is just a static file server)
+- **Source files**: `src/` directory (CSS, JavaScript ES modules)
+- **Static assets**: `public/assets/` directory (images, fonts - copied to dist/)
+- **Build output**: `dist/` directory (committed, served by Express)
+- **Server code**: `server.js` (keep it simple, serves `dist/`)
 - **Configuration**: `config/` directory
 - **Scripts**: `scripts/` directory
 - **Logs**: `logs/` directory (gitignored)
@@ -637,12 +702,13 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 
 ### Code Style
 
-- Use standard JavaScript (ES6+)
+- Use ES modules (`import`/`export`) for JavaScript
 - Keep code simple and readable
 - Comment complex logic
 - Follow existing patterns
 - Use design tokens for styling
 - One component = one CSS file + one JS file
+- Preserve `window.WinnieOS` namespace for compatibility
 
 ### Design Principles
 
