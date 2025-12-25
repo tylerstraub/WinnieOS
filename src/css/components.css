@@ -11,6 +11,7 @@
 @import 'components/apps.css';
 @import 'components/apps-colors.css';
 @import 'components/apps-notepad.css';
+@import 'components/apps-letters.css';
 
 /* Base Typography Styles */
 h1 {

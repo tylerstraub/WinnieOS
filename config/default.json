@@ -16,6 +16,7 @@
   "apps": {
     "enabled": [
       "notepad",
+      "letters",
       "colors"
     ]
   }

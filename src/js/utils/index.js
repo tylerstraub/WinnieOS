@@ -5,18 +5,17 @@
  * Add utility modules here as needed
  */
 
-// Import utility modules
+// Ensure the shared Utils namespace exists first, so utility modules can safely attach to it.
+// NOTE: This file must NOT overwrite `window.WinnieOS.Utils`, otherwise previously-attached
+// utilities (Storage/Background/Audio/etc) would disappear.
+export const Utils = (typeof window !== 'undefined')
+    ? (window.WinnieOS = window.WinnieOS || {}, window.WinnieOS.Utils = window.WinnieOS.Utils || {}, window.WinnieOS.Utils)
+    : {};
+
+// Import utility modules (they attach themselves to `window.WinnieOS.Utils`)
 import './storage.js';
 import './background.js';
-
-// Utilities namespace
-export const Utils = {};
-
-// Attach to window namespace for compatibility
-if (typeof window !== 'undefined') {
-    window.WinnieOS = window.WinnieOS || {};
-    window.WinnieOS.Utils = Utils;
-}
+import './audio.js';
 
 // Utility modules are imported above and attached to window.WinnieOS.Utils
 // Example structure:
