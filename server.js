@@ -3,13 +3,61 @@ const path = require('path');
 const fs = require('fs');
 const winston = require('winston');
 
-// Load configuration
-const defaultConfig = require('./config/default.json');
+// Ensure config directory exists
+const configDir = path.join(__dirname, 'config');
+if (!fs.existsSync(configDir)) {
+  fs.mkdirSync(configDir, { recursive: true });
+}
+
+// Fallback defaults (only used if config/default.json is missing or invalid)
+// These should match config/default.json - if you update defaults, update both places
+const fallbackDefaults = {
+  server: {
+    port: 3000,
+    host: "localhost"
+  },
+  display: {
+    reference: {
+      width: 1280,
+      height: 800
+    }
+  },
+  logging: {
+    level: "info",
+    filename: "logs/winnieos.log"
+  },
+  apps: {
+    enabled: [
+      "colors"
+    ]
+  }
+};
+
+// Load default config (source of truth: config/default.json)
+const defaultConfigPath = path.join(__dirname, 'config', 'default.json');
+let defaultConfig;
+try {
+  if (fs.existsSync(defaultConfigPath)) {
+    defaultConfig = JSON.parse(fs.readFileSync(defaultConfigPath, 'utf8'));
+  } else {
+    // File doesn't exist, create it from fallback defaults
+    console.log('Default config not found, creating from fallback defaults...');
+    defaultConfig = fallbackDefaults;
+    fs.writeFileSync(defaultConfigPath, JSON.stringify(fallbackDefaults, null, 2), 'utf8');
+  }
+} catch (err) {
+  // File exists but is invalid JSON, recreate from fallback defaults
+  console.error('Error loading default config, recreating from fallback defaults:', err.message);
+  defaultConfig = fallbackDefaults;
+  fs.writeFileSync(defaultConfigPath, JSON.stringify(fallbackDefaults, null, 2), 'utf8');
+}
+
+// Load local config (optional overrides)
 let localConfig = {};
 const localConfigPath = path.join(__dirname, 'config', 'local.json');
 if (fs.existsSync(localConfigPath)) {
   try {
-    localConfig = require(localConfigPath);
+    localConfig = JSON.parse(fs.readFileSync(localConfigPath, 'utf8'));
   } catch (err) {
     console.error('Error loading local config, using defaults:', err.message);
   }
