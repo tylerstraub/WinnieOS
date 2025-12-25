@@ -75,7 +75,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #1a1a1a; /* Background for letterboxing areas */
+            background: #667eea; /* Match canvas gradient start color for seamless appearance */
         }
 
         /* ============================================
@@ -140,22 +140,35 @@
             /* ============================================
                VIEWPORT SCALING
                Scales 1280x800 design to fit any viewport
+               Target resolution (1280x800) fills screen completely
                ============================================ */
             WinnieOS.Viewport = (function() {
                 const DESIGN_WIDTH = 1280;
                 const DESIGN_HEIGHT = 800;
                 const canvas = document.getElementById('winnieos-canvas');
+                const TOLERANCE = 1; // 1px tolerance for exact match detection
 
                 function updateScale() {
                     const viewportWidth = window.innerWidth;
                     const viewportHeight = window.innerHeight;
 
-                    // Calculate scale to fit viewport (maintains aspect ratio)
+                    // If viewport exactly matches target resolution, fill directly (no scaling needed)
+                    if (Math.abs(viewportWidth - DESIGN_WIDTH) <= TOLERANCE && 
+                        Math.abs(viewportHeight - DESIGN_HEIGHT) <= TOLERANCE) {
+                        canvas.style.width = '100vw';
+                        canvas.style.height = '100vh';
+                        canvas.style.transform = 'none';
+                        return;
+                    }
+
+                    // For other resolutions, scale to fit while maintaining aspect ratio
                     const scaleX = viewportWidth / DESIGN_WIDTH;
                     const scaleY = viewportHeight / DESIGN_HEIGHT;
                     const scale = Math.min(scaleX, scaleY);
 
-                    // Apply scale transform
+                    // Reset to original size and apply scale transform
+                    canvas.style.width = DESIGN_WIDTH + 'px';
+                    canvas.style.height = DESIGN_HEIGHT + 'px';
                     canvas.style.transform = `scale(${scale})`;
                 }
 
