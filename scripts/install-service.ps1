@@ -39,6 +39,36 @@ if (-not (Test-Path "node_modules")) {
     }
 }
 
+# For install action, ensure dist directory exists (service requires it)
+if ($Action -eq "install") {
+    $distPath = Join-Path $projectRoot "dist"
+    if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.html"))) {
+        Write-Host "Building production bundle (required for service)..." -ForegroundColor Yellow
+        npm run build
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to build production bundle. Service requires dist/ directory to exist."
+            exit 1
+        }
+        Write-Host "  [OK] Production bundle built" -ForegroundColor Green
+    }
+}
+
+# For uninstall action, stop the service first (if running) for clean removal
+if ($Action -eq "uninstall") {
+    $serviceName = "WinnieOS Server"
+    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+    if ($service) {
+        if ($service.Status -eq "Running") {
+            Write-Host "Stopping service before uninstall..." -ForegroundColor Yellow
+            Stop-Service -Name $serviceName -Force
+            Start-Sleep -Seconds 2
+            Write-Host "  [OK] Service stopped" -ForegroundColor Green
+        } else {
+            Write-Host "Service is already stopped" -ForegroundColor Gray
+        }
+    }
+}
+
 # Run the Node.js installer script
 Write-Host "Running service $Action..." -ForegroundColor Yellow
 node "$scriptDir\install-service.js" $Action

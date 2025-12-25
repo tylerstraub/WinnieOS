@@ -111,11 +111,27 @@ if (-not $SkipServiceInstall) {
         Write-Host "  [WARN] Not running as Administrator. Service installation skipped." -ForegroundColor Yellow
         Write-Host "  To install the service, run: .\scripts\install-service.ps1 install" -ForegroundColor Gray
     } else {
-        & "$scriptDir\install-service.ps1" install
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  [OK] Windows Service installed and started" -ForegroundColor Green
-        } else {
-            Write-Host "  [WARN] Service installation had issues. You can install it later with: .\scripts\install-service.ps1 install" -ForegroundColor Yellow
+        # Ensure dist directory exists before installing service (service requires it)
+        $distPath = Join-Path $projectRoot "dist"
+        if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.html"))) {
+            Write-Host "  Building production bundle (required for service)..." -ForegroundColor Yellow
+            npm run build
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "  [WARN] Failed to build production bundle. Service installation skipped." -ForegroundColor Yellow
+                Write-Host "  Build the project first: npm run build" -ForegroundColor Gray
+                Write-Host "  Then install service: .\scripts\install-service.ps1 install" -ForegroundColor Gray
+            } else {
+                Write-Host "  [OK] Production bundle built" -ForegroundColor Green
+            }
+        }
+        
+        if ((Test-Path $distPath) -and (Test-Path (Join-Path $distPath "index.html"))) {
+            & "$scriptDir\install-service.ps1" install
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  [OK] Windows Service installed and started" -ForegroundColor Green
+            } else {
+                Write-Host "  [WARN] Service installation had issues. You can install it later with: .\scripts\install-service.ps1 install" -ForegroundColor Yellow
+            }
         }
     }
     Write-Host ""

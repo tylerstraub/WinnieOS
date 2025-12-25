@@ -35,7 +35,7 @@ if (action === 'install') {
   svc.install();
   // node-windows keeps the process alive during installation
 } else if (action === 'uninstall') {
-  // Uninstall the service
+  // Uninstall the service (PowerShell wrapper handles stopping first)
   svc.on('uninstall', () => {
     console.log(`${serviceName} uninstalled successfully`);
     process.exit(0);

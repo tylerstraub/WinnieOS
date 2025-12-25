@@ -109,13 +109,17 @@ if (-not (Test-Path $distPath) -or -not (Test-Path (Join-Path $distPath "index.h
     Write-Host "  [OK] Production bundle exists" -ForegroundColor Green
 }
 
-# Ensure Windows Service is running
+# Ensure Windows Service is running (restart to pick up any code changes)
 Write-Host "Checking service status..." -ForegroundColor Yellow
 $serviceName = "WinnieOS Server"
 $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 
 if ($service) {
-    if ($service.Status -ne "Running") {
+    if ($service.Status -eq "Running") {
+        Write-Host "  Restarting service to pick up code changes..." -ForegroundColor Yellow
+        Restart-Service -Name $serviceName -Force
+        Start-Sleep -Seconds 3
+    } else {
         Write-Host "  Starting service..." -ForegroundColor Yellow
         Start-Service -Name $serviceName
         Start-Sleep -Seconds 2
