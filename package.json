@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
+    "dev": "node server-dev.js",
     "install-service": "node scripts/install-service.js install",
     "uninstall-service": "node scripts/install-service.js uninstall",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -23,5 +23,8 @@
     "express": "^5.2.1",
     "node-windows": "^1.0.0-beta.8",
     "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "browser-sync": "^3.0.4"
   }
 }
