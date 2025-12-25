@@ -110,8 +110,11 @@ body {
     height: var(--ref-height); /* 800px */
     
     /* Positioning and layout */
-    position: relative;
-    transform-origin: center center; /* Scale from center */
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform-origin: top left; /* JS scales from top-left and centers via left/top */
+    will-change: transform;
     
     /* Visual styling */
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);

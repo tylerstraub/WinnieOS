@@ -78,8 +78,18 @@ WinnieOS/
 **Reference Resolution: 1280x800 (16:10 aspect ratio)**
 - All UI elements are designed and sized for this resolution
 - Canvas is always 1280x800px (never changes)
-- At exact reference resolution (1280x800): canvas fills viewport directly using `position: fixed` with `100%` width/height
-- On other resolutions: canvas scales proportionally using CSS `transform: scale()` maintaining aspect ratio
+- The app is rendered by applying a single uniform transform scale (no responsive reflow)
+- Canvas is centered with letterboxing/pillarboxing on non-16:10 viewports
+
+**Viewport Scaling Convention (Canonical)**
+- Canvas internal coordinate system is always **1280×800**
+- Scale is computed as: \( scale = \min(\frac{vw}{1280}, \frac{vh}{800}) \)
+- The scaled canvas is centered by setting pixel `left/top` offsets
+- At 1280×800: **scale = 1** and offsets are **0**, so the reference device “locks” perfectly without special-casing
+
+**Debugging**
+- Current scale is exposed as `#winnieos-canvas[data-scale]`
+- The same value is also available as CSS variable `--viewport-scale` on `:root`
 
 **Design Tokens (CSS Custom Properties)**
 - Typography scale: `--font-size-xs` through `--font-size-6xl`
