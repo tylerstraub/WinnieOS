@@ -3,16 +3,36 @@
  * Scrollable, touch-first list of registered apps.
  */
 
+import { Audio } from '../utils/audio.js';
+
 export const DesktopScreen = (function() {
     let rootEl = null;
     let cleanup = null;
+
+    function playAfterUnlock(fn) {
+        try {
+            if (Audio && typeof Audio.isUnlocked === 'function' && Audio.isUnlocked()) {
+                try { fn(); } catch (_) { /* ignore */ }
+                return;
+            }
+            if (Audio && typeof Audio.unlock === 'function') {
+                Audio.unlock().then(() => {
+                    try { fn(); } catch (_) { /* ignore */ }
+                }).catch(() => {});
+            }
+        } catch (_) { /* ignore */ }
+    }
 
     function renderAppTile(app, nav) {
         const btn = document.createElement('button');
         btn.className = 'wos-app-tile';
         btn.type = 'button';
         btn.setAttribute('aria-label', app.title);
-        btn.addEventListener('click', () => nav.openApp(app.id));
+        btn.addEventListener('click', () => {
+            // App launch cue (matches Letters "launch" energy)
+            playAfterUnlock(() => Audio.launch(0.80));
+            nav.openApp(app.id);
+        });
 
         if (app.iconSrc) {
             const img = document.createElement('img');

@@ -3,11 +3,27 @@
  * Mounts a registered app full-screen. Shell owns navigation chrome.
  */
 
+import { Audio } from '../utils/audio.js';
+
 export const AppHostScreen = (function() {
     let hostEl = null;
     let appRootEl = null;
     let activeApp = null;
     let cleanupFn = null;
+
+    function playAfterUnlock(fn) {
+        try {
+            if (Audio && typeof Audio.isUnlocked === 'function' && Audio.isUnlocked()) {
+                try { fn(); } catch (_) { /* ignore */ }
+                return;
+            }
+            if (Audio && typeof Audio.unlock === 'function') {
+                Audio.unlock().then(() => {
+                    try { fn(); } catch (_) { /* ignore */ }
+                }).catch(() => {});
+            }
+        } catch (_) { /* ignore */ }
+    }
 
     function safeCleanup() {
         // Convention: if an app returns a cleanup function from mount(), we run it,
@@ -44,6 +60,8 @@ export const AppHostScreen = (function() {
                     <div class="wos-app-placeholder-title">Oops!</div>
                     <div class="wos-app-placeholder-text">That app isn’t here yet.</div>
                 `;
+                // Gentle "not available" cue (don’t punish; just inform)
+                playAfterUnlock(() => Audio.buzz(0.35));
                 return;
             }
 
@@ -57,6 +75,8 @@ export const AppHostScreen = (function() {
                     <div class="wos-app-placeholder-title">Uh oh!</div>
                     <div class="wos-app-placeholder-text">This app had a little problem starting.</div>
                 `;
+                // Slightly stronger "error" cue
+                playAfterUnlock(() => Audio.buzz(0.55));
                 activeApp = null;
                 cleanupFn = null;
             }

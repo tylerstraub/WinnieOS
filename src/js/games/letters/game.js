@@ -799,7 +799,7 @@ export function createLettersGame(opts) {
         falling = null;
     }
 
-    function finishAndRevealNext(scoredBinId) {
+    function finishAndRevealNext(scoredBinId, opts) {
         if (disposed) return;
         clearFallingLetter();
         binCandidate = null;
@@ -808,18 +808,34 @@ export function createLettersGame(opts) {
         // Create real space between "done" and "next letter reveal".
         setHudEmpty(true);
 
+        const isInitial = !!(opts && opts.initial);
+        const baseDelayMs = isInitial ? 250 : nextReadyBaseMs;
+        const suspenseMinMs = isInitial ? 450 : nextReadyRandomMinMs;
+        const suspenseMaxMs = isInitial ? 1100 : nextReadyRandomMaxMs;
+
         const beginNextLetterAnticipation = () => setTimeoutTracked(() => {
             if (disposed) return;
             // Distinct "get ready" cue, then suspense delay before reveal.
-            Audio.ready(0.62);
+            // If audio isn't unlocked yet (autoplay policy), don't spam; it will work after first gesture.
+            try {
+                if (!Audio.isUnlocked || !Audio.isUnlocked()) {
+                    // no-op
+                } else {
+                    Audio.ready(isInitial ? 0.52 : 0.62);
+                }
+            } catch (_) { /* ignore */ }
 
-            const suspenseMs = Math.round(randRange(nextReadyRandomMinMs, nextReadyRandomMaxMs));
+            const suspenseMs = Math.round(randRange(suspenseMinMs, suspenseMaxMs));
             // Drumroll during suspense (stop right as we reveal).
             if (stopDrumroll) {
                 try { stopDrumroll(); } catch (_) { /* ignore */ }
                 stopDrumroll = null;
             }
-            stopDrumroll = Audio.drumroll(suspenseMs, 0.55);
+            try {
+                if (Audio.isUnlocked && Audio.isUnlocked()) {
+                    stopDrumroll = Audio.drumroll(suspenseMs, isInitial ? 0.42 : 0.55);
+                }
+            } catch (_) { /* ignore */ }
 
             setTimeoutTracked(() => {
                 if (disposed) return;
@@ -841,14 +857,16 @@ export function createLettersGame(opts) {
                 setHudEmpty(false);
                 if (hudEl) addClassForMs(hudEl, 'wos-letters-hud--intro-slow', 700);
                 // Gentle, intentional cue (not as exciting as launch/reward).
-                Audio.pop(0.28);
+                try {
+                    if (Audio.isUnlocked && Audio.isUnlocked()) Audio.pop(0.28);
+                } catch (_) { /* ignore */ }
 
                 setTimeoutTracked(() => {
                     if (disposed) return;
                     setPhase('idleAwaitingKey');
                 }, introBeatMs);
             }, suspenseMs);
-        }, nextReadyBaseMs);
+        }, baseDelayMs);
 
         // If this was a confirmed catch, do the score "count up" beat right after despawn.
         if (scoredBinId) {
@@ -1426,18 +1444,13 @@ export function createLettersGame(opts) {
         // Init physics
         initWorld();
 
-        // Start with an "intro" beat so the child doesn't feel rushed.
-        // Initialize letters: show target, pre-pick next.
-        setTargetLetter(targetLetter);
-        nextLetter = pickRandomLetter();
-        setHudEmpty(false);
+        // IMPORTANT: On first entry, do NOT instantly reveal a letter.
+        // Reuse the same "pause + anticipation + reveal" sequence we use between rounds.
+        // That sequence reveals `nextLetter`, so we temporarily point it at the initial target.
+        setHudEmpty(true);
         if (hudEl) hudEl.setAttribute('data-wos-letters-intro', 'none');
-        if (hudEl) addClassForMs(hudEl, 'wos-letters-hud--intro-slow', 700);
-        Audio.pop(0.22);
-        setTimeoutTracked(() => {
-            if (disposed) return;
-            setPhase('idleAwaitingKey');
-        }, introBeatMs);
+        nextLetter = targetLetter;
+        finishAndRevealNext(null, { initial: true });
 
         // Input
         document.addEventListener('keydown', onKeyDown, true);

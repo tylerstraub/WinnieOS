@@ -9,6 +9,7 @@
 import { Navigation } from '../nav/navigation.js';
 import { Apps } from '../apps/index.js';
 import { Screens } from '../screens/index.js';
+import { Audio } from '../utils/audio.js';
 
 let initialized = false;
 let unsubscribe = null;
@@ -16,6 +17,21 @@ let shellEl = null;
 let contentEl = null;
 let activeScreen = null;
 let activeKey = null;
+let unlockGesturesInstalled = false;
+
+function playAfterUnlock(fn) {
+    try {
+        if (Audio && typeof Audio.isUnlocked === 'function' && Audio.isUnlocked()) {
+            try { fn(); } catch (_) { /* ignore */ }
+            return;
+        }
+        if (Audio && typeof Audio.unlock === 'function') {
+            Audio.unlock().then(() => {
+                try { fn(); } catch (_) { /* ignore */ }
+            }).catch(() => {});
+        }
+    } catch (_) { /* ignore */ }
+}
 
 function getCanvas() {
     return document.getElementById('winnieos-canvas');
@@ -57,7 +73,19 @@ function ensureDom() {
                 <path fill="currentColor" d="M12 3.2 3 10.4v10.4h6.2v-6.2h5.6v6.2H21V10.4L12 3.2Zm7 15.6h-2.6v-6.2H7.6v6.2H5V11.4l7-5.6 7 5.6v7.4Z"/>
             </svg>
         `;
-        homeBtn.addEventListener('click', () => Navigation.goHome());
+        homeBtn.addEventListener('click', () => {
+            // Home feels like "close app" when you’re inside an app, otherwise a small tap.
+            try {
+                const st = Navigation && typeof Navigation.getState === 'function' ? Navigation.getState() : null;
+                if (st && st.screen === 'app') {
+                    playAfterUnlock(() => Audio.poof(0.60));
+                } else {
+                    playAfterUnlock(() => Audio.tick());
+                }
+            } catch (_) { /* ignore */ }
+
+            Navigation.goHome();
+        });
         topbar.appendChild(homeBtn);
     }
 
@@ -89,7 +117,16 @@ async function mountForState(state) {
         : screenName;
     if (activeScreen === next && activeKey === nextKey) return;
 
+    const prevKey = activeKey;
     unmountActive();
+
+    // Navigation SFX (only for automatic transitions; button/app-launch sounds live at the source action).
+    try {
+        if (prevKey === 'startup' && nextKey === 'desktop' && Audio.isUnlocked && Audio.isUnlocked()) {
+            Audio.ready(0.50);
+        }
+    } catch (_) { /* ignore */ }
+
     activeScreen = next;
     activeKey = nextKey;
     if (activeScreen && typeof activeScreen.mount === 'function') {
@@ -116,6 +153,21 @@ export const Shell = {
         if (!ensureDom()) return;
         initialized = true;
 
+        // Prepare audio graph early; actual output unlock happens on first user gesture.
+        try { Audio.ensure(); } catch (_) { /* ignore */ }
+        if (!unlockGesturesInstalled && typeof document !== 'undefined') {
+            unlockGesturesInstalled = true;
+            try {
+                // First real gesture unlocks the AudioContext (Chrome autoplay policy)
+                document.addEventListener('pointerdown', () => {
+                    try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+                }, { capture: true, passive: true, once: true });
+                document.addEventListener('keydown', () => {
+                    try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+                }, { capture: true, once: true });
+            } catch (_) { /* ignore */ }
+        }
+
         // Start navigation and mount initial screen
         Navigation.init({ initialState: { screen: 'startup' } });
         unsubscribe = Navigation.subscribe(mountForState);
@@ -135,6 +187,7 @@ export const Shell = {
         shellEl = null;
         contentEl = null;
         activeKey = null;
+        unlockGesturesInstalled = false;
     }
 };
 

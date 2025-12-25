@@ -6,6 +6,7 @@
  */
 
 import { Background } from '../../utils/background.js';
+import { Audio } from '../../utils/audio.js';
 
 export default {
     id: 'colors',
@@ -15,6 +16,9 @@ export default {
 
     mount: function({ root }) {
         if (!root) return;
+
+        // Prepare audio graph early; unlock happens on first user gesture.
+        try { Audio.ensure(); } catch (_) { /* ignore */ }
 
         // Clear any existing content
         root.className = 'wos-colors-app';
@@ -257,6 +261,30 @@ export default {
 
         // Interaction (Pointer Events + pointer capture = consistent drag across mouse/touch)
         let activePointerId = null;
+        let lastMove = null; // { x, y, ts }
+        const nowMs = () => (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
+        const updateDragSound = (wheel, clientX, clientY) => {
+            try {
+                if (!wheel) return;
+                const now = nowMs();
+                let speed01 = 0.35;
+                if (lastMove && Number.isFinite(lastMove.ts)) {
+                    const dt = Math.max(1, now - lastMove.ts);
+                    const dx = (clientX - lastMove.x);
+                    const dy = (clientY - lastMove.y);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const pxPerMs = dist / dt;
+                    // Typical comfy drag ~0.3..1.5 px/ms; clamp to 0..1
+                    speed01 = Math.max(0, Math.min(1, pxPerMs / 1.6));
+                }
+                lastMove = { x: clientX, y: clientY, ts: now };
+
+                if (Audio && typeof Audio.colorDragUpdate === 'function') {
+                    Audio.colorDragUpdate({ hue: wheel.hue, t: wheel.t, speed: speed01 });
+                }
+            } catch (_) { /* ignore */ }
+        };
 
         const applySelection = (clientX, clientY) => {
             const wheel = pointToWheel(clientX, clientY);
@@ -274,6 +302,11 @@ export default {
 
             Background.apply(color);
             Background.save(color);
+
+            // Continuous "drag" tone follows hue + saturation while the pointer is down.
+            if (activePointerId !== null && Audio) {
+                updateDragSound(wheel, clientX, clientY);
+            }
         };
 
         const onPointerDown = (e) => {
@@ -282,6 +315,28 @@ export default {
             activePointerId = e.pointerId;
             try { pickerArea.setPointerCapture(activePointerId); } catch (_) { /* ignore */ }
             e.preventDefault();
+
+            const ensureUnlocked = () => {
+                try {
+                    if (Audio && typeof Audio.isUnlocked === 'function' && Audio.isUnlocked()) return Promise.resolve(true);
+                    if (Audio && typeof Audio.unlock === 'function') return Audio.unlock().then(() => true).catch(() => false);
+                } catch (_) { /* ignore */ }
+                return Promise.resolve(false);
+            };
+
+            ensureUnlocked().then((ok) => {
+                if (!ok) return;
+                try {
+                    if (Audio && typeof Audio.colorDragStart === 'function') Audio.colorDragStart();
+                } catch (_) { /* ignore */ }
+                // Ensure we emit at least one update after unlock so the tone matches the initial position.
+                try {
+                    const wheel = pointToWheel(e.clientX, e.clientY);
+                    updateDragSound(wheel, e.clientX, e.clientY);
+                } catch (_) { /* ignore */ }
+            });
+            lastMove = null;
+
             applySelection(e.clientX, e.clientY);
         };
 
@@ -296,6 +351,10 @@ export default {
             e.preventDefault();
             try { pickerArea.releasePointerCapture(activePointerId); } catch (_) { /* ignore */ }
             activePointerId = null;
+            lastMove = null;
+            try {
+                if (Audio && typeof Audio.colorDragStop === 'function') Audio.colorDragStop();
+            } catch (_) { /* ignore */ }
         };
 
         pickerArea.addEventListener('pointerdown', onPointerDown);
@@ -310,6 +369,9 @@ export default {
             pickerArea.removeEventListener('pointermove', onPointerMove);
             pickerArea.removeEventListener('pointerup', endPointer);
             pickerArea.removeEventListener('pointercancel', endPointer);
+            try {
+                if (Audio && typeof Audio.colorDragStop === 'function') Audio.colorDragStop();
+            } catch (_) { /* ignore */ }
         };
     },
 

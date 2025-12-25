@@ -9,6 +9,7 @@
  */
 
 import { Storage } from '../../utils/storage.js';
+import { Audio } from '../../utils/audio.js';
 
 const STORAGE_KEY = 'apps.notepad.v1';
 
@@ -177,6 +178,9 @@ export default {
     mount: function({ root }) {
         if (!root) return;
 
+        // Prepare audio graph early; unlock happens on first user gesture.
+        try { Audio.ensure(); } catch (_) { /* ignore */ }
+
         root.className = 'wos-notepad-app';
         root.innerHTML = '';
 
@@ -185,6 +189,15 @@ export default {
 
         const wrap = document.createElement('div');
         wrap.className = 'wos-notepad-wrap';
+
+        // Some actions insert content programmatically (emoji/paste/clear). Those have their own cues.
+        // Suppress the per-keystroke typing sound for a short window to avoid double-playing.
+        let suppressTypeUntilMs = 0;
+        const nowMs = () => (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        const suppressTypeFor = (ms) => {
+            const now = nowMs();
+            suppressTypeUntilMs = Math.max(suppressTypeUntilMs, now + Math.max(0, ms || 0));
+        };
 
         // Big "paper" writing area
         const paper = document.createElement('div');
@@ -218,6 +231,10 @@ export default {
             b.setAttribute('aria-label', 'Emoji');
             b.textContent = emoji;
             b.addEventListener('click', () => {
+                try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+                // Tiny joyful "stamp" cue (keep it light; avoid music).
+                try { Audio.pop(0.22); } catch (_) { /* ignore */ }
+                suppressTypeFor(140);
                 editor.focus({ preventScroll: true });
                 insertTextAtCaret(emoji);
                 scheduleSave();
@@ -240,6 +257,9 @@ export default {
             btn.setAttribute('data-wos-notepad-swatch', c.hex);
             btn.style.background = c.hex;
             btn.addEventListener('click', () => {
+                try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+                // Color pick feels like a gentle "plink" (a tactile selection).
+                try { Audio.plink(0.28); } catch (_) { /* ignore */ }
                 currentColor = c.hex;
                 setActiveSwatch(controls, currentColor);
                 // Make sure the next typing uses this color
@@ -279,21 +299,72 @@ export default {
                 e.preventDefault();
                 const text = (e.clipboardData && e.clipboardData.getData('text/plain')) || '';
                 if (!text) return;
+                try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+                // Soft confirmation that something happened (paste is less "celebratory" than emoji).
+                try { Audio.tick(); } catch (_) { /* ignore */ }
+                suppressTypeFor(180);
                 editor.focus({ preventScroll: true });
                 insertTextAtCaret(text);
                 scheduleSave();
             } catch (_) { /* ignore */ }
         };
 
-        const onInput = () => {
+        const onInput = (e) => {
             scheduleSave();
+
+            // Fun typing SFX (only for actual character inserts; avoid deletes/undo/etc).
+            try {
+                const now = nowMs();
+                if (now < suppressTypeUntilMs) return;
+
+                const inputType = e && typeof e.inputType === 'string' ? e.inputType : '';
+                if (!inputType || !inputType.startsWith('insert')) return;
+
+                const data = e && typeof e.data === 'string' ? e.data : '';
+                // Ignore multi-character inserts (IME/autocorrect/paste) to keep it sane.
+                if (!data || data.length !== 1) return;
+
+                const ensureUnlocked = () => {
+                    try {
+                        if (Audio && typeof Audio.isUnlocked === 'function' && Audio.isUnlocked()) return Promise.resolve(true);
+                        if (Audio && typeof Audio.unlock === 'function') return Audio.unlock().then(() => true).catch(() => false);
+                    } catch (_) { /* ignore */ }
+                    return Promise.resolve(false);
+                };
+
+                const ch = data;
+                const isSpace = ch === ' ';
+                const isEnter = ch === '\n' || ch === '\r';
+                const flavor = isEnter ? 'enter' : (isSpace ? 'space' : 'alpha');
+
+                // Dynamic: spaces are quieter; normal letters slightly louder with random micro-variation.
+                // Quieter overall (per user request) while keeping dynamics + variation.
+                const base = isSpace ? 0.14 : 0.28;
+                const s = Math.max(0, Math.min(1, base + (Math.random() * 0.14 - 0.07)));
+                if (Audio && typeof Audio.type === 'function') {
+                    ensureUnlocked().then((ok) => {
+                        if (!ok) return;
+                        try { Audio.type(s, flavor); } catch (_) { /* ignore */ }
+                    });
+                } else {
+                    // Backward-compatible fallback
+                    Audio.plink(isSpace ? 0.18 : 0.26);
+                }
+            } catch (_) { /* ignore */ }
         };
 
         const onPointerDown = () => {
             // Keep it simple: tapping paper just focuses for typing.
+            try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+            // Paper tap should feel responsive but not distracting.
+            try { Audio.tick(); } catch (_) { /* ignore */ }
         };
 
         const onTrash = () => {
+            try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
+            // Clearing is a "poof" (matches Letters despawn language).
+            try { Audio.poof(0.75); } catch (_) { /* ignore */ }
+            suppressTypeFor(240);
             editor.innerHTML = '';
             saveNow();
             // Re-apply current color so next typing is correct

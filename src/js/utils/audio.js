@@ -16,6 +16,9 @@ let compressor = null;
 let clipper = null;        // safety soft-clip (should almost never engage)
 let unlocked = false;
 
+// Continuous "color drag" voice state (for the Colors app)
+let colorDrag = null;
+
 // Master level knob (0..1), mapped to dB for perceptual control.
 // Keep dynamics in the per-sound design; this is just global trim.
 let masterLevel = 1.0; // EXTREME boost by default (user-requested); tune down once calibrated
@@ -37,7 +40,9 @@ const MIN_INTERVAL = {
     ready: 0.30,
     binBounce: 0.03,
     scoreTick: 0.09,
-    star: 0.35
+    star: 0.35,
+    // Typing can be rapid; keep it snappy but safely rate-limited.
+    type: 0.028
 };
 
 function now() {
@@ -704,6 +709,258 @@ function playPlink(impactStrength = 0.4) {
     }
 }
 
+function playType(strength = 0.45, flavor = 'alpha') {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('type')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    // "Clicky + poppy" micro-transient with lots of subtle variation, but not musical.
+    // Layer 1: bright click (square through a highpass)
+    const clickOsc = c.createOscillator();
+    const clickGain = c.createGain();
+    const clickHp = c.createBiquadFilter();
+    clickHp.type = 'highpass';
+    clickHp.frequency.setValueAtTime(900 + 2200 * s, t);
+
+    clickOsc.type = 'square';
+    const clickBase =
+        flavor === 'space' ? (180 + 120 * Math.random()) :
+        flavor === 'enter' ? (240 + 160 * Math.random()) :
+        (260 + 520 * Math.random());
+    clickOsc.frequency.setValueAtTime(clickBase, t);
+    clickOsc.detune.setValueAtTime((Math.random() * 2 - 1) * 28, t);
+
+    // Lower overall typing level (per user request) while keeping dynamics + variation.
+    envGain(clickGain, t, 0.001, 0.045 + 0.020 * Math.random(), 0.016 * (0.35 + 0.65 * s), 0.00001);
+    clickOsc.connect(clickHp);
+    clickHp.connect(clickGain);
+    clickGain.connect(master);
+    clickOsc.start(t);
+    clickOsc.stop(t + 0.08);
+
+    // Layer 2: tiny "pop" body (triangle+sine) with randomized interval
+    const body1 = c.createOscillator();
+    const body2 = c.createOscillator();
+    const bodyGain = c.createGain();
+    const bodyLp = c.createBiquadFilter();
+    bodyLp.type = 'lowpass';
+    bodyLp.frequency.setValueAtTime(1200 + 1200 * s, t);
+
+    body1.type = 'triangle';
+    body2.type = 'sine';
+    const bodyBase =
+        flavor === 'space' ? (320 + 180 * Math.random()) :
+        flavor === 'enter' ? (420 + 240 * Math.random()) :
+        (420 + 520 * Math.random());
+    const interval = 1.10 + 0.22 * Math.random(); // non-musical-ish ratio
+    body1.frequency.setValueAtTime(bodyBase, t);
+    body2.frequency.setValueAtTime(bodyBase * interval, t);
+    body1.detune.setValueAtTime((Math.random() * 2 - 1) * 18, t);
+    body2.detune.setValueAtTime((Math.random() * 2 - 1) * 18, t);
+
+    // Slight "flick" up to keep it lively
+    body1.frequency.exponentialRampToValueAtTime(bodyBase * (1.10 + 0.10 * Math.random()), t + 0.035);
+
+    envGain(bodyGain, t, 0.001, 0.070 + 0.030 * Math.random(), 0.020 * (0.35 + 0.65 * s), 0.00001);
+    body1.connect(bodyLp);
+    body2.connect(bodyLp);
+    bodyLp.connect(bodyGain);
+    bodyGain.connect(master);
+    body1.start(t);
+    body2.start(t);
+    body1.stop(t + 0.11);
+    body2.stop(t + 0.11);
+
+    // Layer 3: super-quiet sparkle/noise tick for "physicality"
+    if (Math.random() < (0.55 + 0.25 * s)) {
+        playNoiseBurst(t, 0.020 + 0.015 * Math.random(), {
+            gainPeak: 0.0012 + 0.0022 * s,
+            bpHz: 2200 + 2200 * Math.random(),
+            bpQ: 0.8 + 0.6 * Math.random()
+        });
+    }
+
+    // Occasional extra micro-click to avoid repetition (kept rare)
+    if (Math.random() < 0.10) {
+        const t2 = t + 0.028 + 0.020 * Math.random();
+        const o2 = c.createOscillator();
+        const g2 = c.createGain();
+        o2.type = 'square';
+        o2.frequency.setValueAtTime(520 + 820 * Math.random(), t2);
+        envGain(g2, t2, 0.001, 0.028, 0.005 * (0.35 + 0.65 * s), 0.00001);
+        o2.connect(g2);
+        g2.connect(master);
+        o2.start(t2);
+        o2.stop(t2 + 0.05);
+    }
+}
+
+function hueToFreq(hueDeg) {
+    const h = clamp(Number(hueDeg), 0, 360);
+    // Map 0..360° over ~3 octaves (fun but not strongly "melodic")
+    // 120 Hz -> 960 Hz
+    return 120 * Math.pow(2, (h / 360) * 3.0);
+}
+
+function stopColorDrag(whenSec = 0) {
+    const c = ctx;
+    const d = colorDrag;
+    colorDrag = null;
+    if (!d) return;
+
+    const t = c ? (c.currentTime + Math.max(0, whenSec)) : 0;
+    try {
+        if (d.g && d.g.gain) {
+            d.g.gain.cancelScheduledValues(t);
+            d.g.gain.setTargetAtTime(0.00001, t, 0.02);
+        }
+    } catch (_) { /* ignore */ }
+
+    const stopAt = t + 0.12;
+    try { if (d.osc1) d.osc1.stop(stopAt); } catch (_) { /* ignore */ }
+    try { if (d.osc2) d.osc2.stop(stopAt); } catch (_) { /* ignore */ }
+    try { if (d.lfo) d.lfo.stop(stopAt); } catch (_) { /* ignore */ }
+    try { if (d.noise) d.noise.stop(stopAt); } catch (_) { /* ignore */ }
+
+    // Disconnect later (best-effort)
+    setTimeout(() => {
+        try { if (d.osc1) d.osc1.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.osc2) d.osc2.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.lfo) d.lfo.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.noise) d.noise.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.filt) d.filt.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.noiseFilt) d.noiseFilt.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.g) d.g.disconnect(); } catch (_) { /* ignore */ }
+        try { if (d.noiseGain) d.noiseGain.disconnect(); } catch (_) { /* ignore */ }
+    }, 220);
+}
+
+function startColorDrag() {
+    const c = ensureContext();
+    if (!c || !master) return false;
+
+    // Only one at a time.
+    stopColorDrag(0);
+
+    const t = c.currentTime;
+
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.00001, t);
+
+    // Main tonal layer
+    const osc1 = c.createOscillator();
+    const osc2 = c.createOscillator();
+    const filt = c.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.setValueAtTime(1800, t);
+    filt.Q.setValueAtTime(0.5, t);
+
+    osc1.type = 'triangle';
+    osc2.type = 'sine';
+
+    // Subtle, stable detune so it feels "alive" but not wobbly.
+    const det = (Math.random() * 2 - 1) * 9;
+    osc1.detune.setValueAtTime(det, t);
+    osc2.detune.setValueAtTime(-det, t);
+
+    // LFO vibrato (depth changes with saturation)
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(7.5, t);
+    lfoGain.gain.setValueAtTime(0, t);
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc1.frequency);
+    lfoGain.connect(osc2.frequency);
+
+    osc1.connect(filt);
+    osc2.connect(filt);
+    filt.connect(g);
+    g.connect(master);
+
+    // Texture layer: gentle filtered noise to sell "drag"
+    const noiseBuf = makeNoiseBuffer(0.8);
+    let noise = null;
+    let noiseFilt = null;
+    let noiseGain = null;
+    if (noiseBuf) {
+        noise = c.createBufferSource();
+        noise.buffer = noiseBuf;
+        noise.loop = true;
+
+        noiseFilt = c.createBiquadFilter();
+        noiseFilt.type = 'bandpass';
+        noiseFilt.frequency.setValueAtTime(1200, t);
+        noiseFilt.Q.setValueAtTime(0.8, t);
+
+        noiseGain = c.createGain();
+        noiseGain.gain.setValueAtTime(0.00001, t);
+
+        noise.connect(noiseFilt);
+        noiseFilt.connect(noiseGain);
+        noiseGain.connect(master);
+        noise.start(t);
+    }
+
+    // Start
+    osc1.start(t);
+    osc2.start(t);
+    lfo.start(t);
+
+    colorDrag = { g, osc1, osc2, filt, lfo, lfoGain, noise, noiseFilt, noiseGain };
+    return true;
+}
+
+function updateColorDrag({ hue = 0, t01 = 0, speed01 = 0.4 } = {}) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!colorDrag) startColorDrag();
+    if (!colorDrag) return;
+
+    const d = colorDrag;
+    const t = c.currentTime;
+
+    const sat = clamp01(t01);
+    const spd = clamp01(speed01);
+
+    const base = hueToFreq(hue);
+    // Slightly compress range near center so it doesn't feel "dead"
+    const satLift = 0.92 + 0.18 * sat;
+    const f1 = clamp(base * satLift, 110, 1200);
+    const f2 = clamp(f1 * (1.12 + 0.16 * Math.sin((hue / 360) * Math.PI * 2)), 140, 1600);
+
+    // Smooth parameter moves
+    try {
+        d.osc1.frequency.setTargetAtTime(f1, t, 0.015);
+        d.osc2.frequency.setTargetAtTime(f2, t, 0.015);
+    } catch (_) { /* ignore */ }
+
+    // Brightness follows saturation (more saturated = brighter)
+    const cut = 800 + 5200 * sat;
+    try { d.filt.frequency.setTargetAtTime(cut, t, 0.03); } catch (_) { /* ignore */ }
+
+    // Vibrato depth scales with saturation (subtle)
+    const vibDepthHz = 0.8 + 10.0 * sat;
+    try { d.lfoGain.gain.setTargetAtTime(vibDepthHz, t, 0.05); } catch (_) { /* ignore */ }
+
+    // Loudness follows movement (dragging faster = a bit louder), also a bit more present when saturated.
+    const level = (0.0012 + 0.0060 * spd) * (0.50 + 0.65 * sat);
+    try { d.g.gain.setTargetAtTime(level, t, 0.02); } catch (_) { /* ignore */ }
+
+    // Noise texture: tied more to movement than saturation
+    if (d.noiseGain) {
+        const nLevel = (0.00035 + 0.0018 * spd) * (0.45 + 0.55 * sat);
+        try { d.noiseGain.gain.setTargetAtTime(nLevel, t, 0.02); } catch (_) { /* ignore */ }
+    }
+    if (d.noiseFilt) {
+        const nFreq = 900 + 2400 * sat + 300 * spd;
+        try { d.noiseFilt.frequency.setTargetAtTime(nFreq, t, 0.03); } catch (_) { /* ignore */ }
+    }
+}
+
 function playScoreTick(strength = 0.7) {
     const c = ensureContext();
     if (!c || !master) return;
@@ -844,6 +1101,25 @@ export const Audio = {
     },
     ready: function(strength) {
         playReady(strength);
+    },
+    /**
+     * Typing sound (clicky + poppy), designed to be fun with lots of variation,
+     * but still safe and non-musical.
+     *
+     * flavor: 'alpha' | 'space' | 'enter'
+     */
+    type: function(strength, flavor) {
+        playType(strength, flavor);
+    },
+    // Continuous tonal "drag" voice for the Colors wheel
+    colorDragStart: function() {
+        return startColorDrag();
+    },
+    colorDragUpdate: function({ hue, t, speed } = {}) {
+        updateColorDrag({ hue, t01: t, speed01: speed });
+    },
+    colorDragStop: function() {
+        stopColorDrag(0);
     },
     drumroll: function(durationMs, strength) {
         return startDrumroll(durationMs, strength);
