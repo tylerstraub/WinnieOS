@@ -116,15 +116,34 @@ $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
 
 if ($service) {
     if ($service.Status -eq "Running") {
-        Write-Host "  Restarting service to pick up code changes..." -ForegroundColor Yellow
-        Restart-Service -Name $serviceName -Force
-        Start-Sleep -Seconds 3
+        Write-Host "  Attempting to restart service to pick up code changes..." -ForegroundColor Yellow
+        try {
+            Restart-Service -Name $serviceName -Force -ErrorAction Stop
+            Start-Sleep -Seconds 3
+            Write-Host "  [OK] Service restarted successfully" -ForegroundColor Green
+        } catch {
+            Write-Warning "  Could not restart service (may require Administrator privileges): $_"
+            Write-Host "  [INFO] Service is already running, continuing with existing process..." -ForegroundColor Yellow
+            Write-Host "  Note: Code changes will take effect after next service restart or system reboot" -ForegroundColor Gray
+        }
     } else {
         Write-Host "  Starting service..." -ForegroundColor Yellow
-        Start-Service -Name $serviceName
-        Start-Sleep -Seconds 2
+        try {
+            Start-Service -Name $serviceName -ErrorAction Stop
+            Start-Sleep -Seconds 2
+            Write-Host "  [OK] Service started" -ForegroundColor Green
+        } catch {
+            Write-Warning "  Could not start service (may require Administrator privileges): $_"
+        }
     }
-    Write-Host "  [OK] Service is running" -ForegroundColor Green
+    
+    # Verify service is running
+    $service.Refresh()
+    if ($service.Status -eq "Running") {
+        Write-Host "  [OK] Service is running" -ForegroundColor Green
+    } else {
+        Write-Warning "  Service is not running. Server may not be available."
+    }
 } else {
     Write-Warning "Service '$serviceName' not found. The server may not be running."
     Write-Host "  Install the service with: .\scripts\install-service.ps1 install" -ForegroundColor Yellow
