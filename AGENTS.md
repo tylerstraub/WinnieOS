@@ -17,7 +17,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - **Configuration**: JSON-based config system with defaults + local overrides
 - **Logging**: Winston file-based logging to `logs/winnieos.log`
 - **Browser**: Chromium/Chrome launched in kiosk mode via PowerShell
-- **Frontend**: Modular CSS and JavaScript (ES modules) architecture, scalable from simple welcome screen to full OS
+- **Frontend**: Modular CSS and JavaScript (ES modules) architecture, startup → desktop → apps, scalable toward a full OS
 
 ## Critical File Locations
 
@@ -48,6 +48,10 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `src/js/core/viewport.js` - Viewport scaling (fills directly at 1280x800, scales on other resolutions)
 - `src/js/core/kiosk.js` - Kiosk mode protections
 - `src/js/core/index.js` - Core initialization
+- `src/js/nav/navigation.js` - Navigation state machine (startup/desktop/app)
+- `src/js/shell/` - Always-mounted shell (Home button + content host)
+- `src/js/screens/` - Screens (Startup/Desktop/AppHost)
+- `src/js/apps/` - Apps plug-ins (auto-discovered by Vite)
 - `src/js/components/index.js` - Component registry namespace
 - `src/js/components/` - Individual component modules (as features are added)
 - `src/js/utils/index.js` - Utility functions namespace
@@ -99,8 +103,13 @@ Always use design tokens, never hardcode values.
 All JavaScript organized under `WinnieOS` namespace:
 ```javascript
 window.WinnieOS = {
+    Display: { ... },       // Reference resolution owner
     Viewport: { ... },      // Viewport scaling
     Kiosk: { ... },         // Kiosk protections
+    Navigation: { ... },    // Navigation state (startup/desktop/app)
+    Shell: { ... },         // Always-mounted UI shell
+    Screens: { ... },       // Screen registry
+    Apps: { ... },          // App registry (auto-discovered)
     Components: { ... },    // Component registry
     Utils: { ... }          // Utility functions
 }
@@ -168,6 +177,12 @@ window.WinnieOS = {
 
 ### Adding New Features
 
+**Adding an App (preferred extension path):**
+1. Create: `src/js/apps/<appId>/app.js`
+2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
+3. Add icon asset in `public/assets/images/apps/...` (optional)
+4. Build and commit `dist/`
+
 **Adding a Component:**
 1. Create CSS file: `src/css/components/my-component.css`
 2. Import in `src/css/components.css`: `@import 'components/my-component.css';`
@@ -176,9 +191,9 @@ window.WinnieOS = {
 5. Import in `src/main.js` if needed (component registry is already imported)
 
 **Adding a Screen/Page:**
-1. Create CSS file in `src/css/components/` for screen-specific styles
-2. Create JS file in `src/js/components/` for screen logic (ES module)
-3. Add routing logic (future: routing system)
+1. Create JS screen module in `src/js/screens/`
+2. Register in `src/js/screens/index.js`
+3. Screens are switched by `WinnieOS.Navigation` and mounted by `WinnieOS.Shell`
 
 **Adding a Utility:**
 1. Create utility file: `src/js/utils/my-utility.js` (ES module with `export`)

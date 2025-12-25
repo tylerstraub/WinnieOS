@@ -1,0 +1,81 @@
+/* ============================================
+   WINNIEOS DESKTOP (touch-first, scrollable apps)
+   ============================================ */
+
+.wos-desktop {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--spacing-2xl);
+    touch-action: pan-y;
+}
+
+.wos-desktop-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.wos-desktop-title {
+    font-size: var(--font-size-5xl);
+}
+
+.wos-desktop-subtitle {
+    font-size: var(--font-size-xl);
+    color: var(--color-text-muted);
+}
+
+.wos-app-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-2xl);
+    align-items: stretch;
+}
+
+.wos-app-tile {
+    height: var(--size-app-tile-height);
+    border-radius: var(--radius-2xl);
+    border: 0;
+    padding: var(--spacing-xl);
+    cursor: pointer;
+    background: var(--color-glass);
+    color: var(--color-text);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
+    box-shadow: var(--shadow-elev-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-lg);
+}
+
+.wos-app-tile:active {
+    transform: scale(0.98);
+}
+
+.wos-app-icon {
+    width: var(--size-app-icon);
+    height: var(--size-app-icon);
+    object-fit: contain;
+}
+
+.wos-app-emoji {
+    width: var(--size-app-icon);
+    height: var(--size-app-icon);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-6xl);
+    line-height: 1;
+}
+
+.wos-app-title {
+    font-size: var(--font-size-2xl);
+    text-align: center;
+}
+
+

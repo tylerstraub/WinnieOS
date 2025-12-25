@@ -23,3 +23,9 @@ import './js/utils/index.js';
 // JavaScript: Components (load after utilities)
 import './js/components/index.js';
 
+// JavaScript: WinnieOS UI Foundation (Shell + Navigation + Screens + Apps)
+import './js/apps/index.js';
+import './js/nav/navigation.js';
+import './js/screens/index.js';
+import './js/shell/index.js';
+

@@ -1,5 +1,12 @@
 * text=auto
 
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+
+* text=auto
+
 # Keep web assets consistent across platforms (avoid CRLF/LF churn)
 *.js   text eol=lf
 *.css  text eol=lf

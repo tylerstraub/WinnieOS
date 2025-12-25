@@ -4,6 +4,8 @@
 
 WinnieOS is a kid-friendly computing environment designed to introduce toddlers to basic computing concepts. It runs as a local web application optimized for an 8" laptop (1280x800, 16:10 ratio) running Windows 11, launched in Chromium kiosk mode.
 
+**Extending WinnieOS (adding apps):** start with `DAD.md`.
+
 ### Key Characteristics
 
 - **Fully Local**: All code runs locally, no internet required after initial setup
@@ -12,7 +14,7 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 - **Kiosk Mode**: Full-screen Chromium browser with minimal UI distractions
 - **Touch-Friendly**: Optimized for touch interactions while encouraging keyboard use
 - **Development-Friendly**: Simple development workflow separate from production deployment
-- **Scalable Architecture**: Modular structure ready to grow from simple welcome screen to full "pretend OS"
+- **Scalable Architecture**: Modular structure ready to grow from a simple startup/desktop into a full "pretend OS"
 
 ## Architecture
 
@@ -32,6 +34,7 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 ```
 WinnieOS/
 ├── index.html             # Vite entry point (root)
+├── DAD.md                 # "Dad guide" for extending WinnieOS (apps, patterns)
 ├── src/                   # Source files (Vite convention)
 │   ├── main.js           # Application entry point (imports CSS + JS)
 │   ├── css/              # Modular stylesheets
@@ -39,17 +42,19 @@ WinnieOS/
 │   │   ├── base.css      # Reset, normalize, canvas, kiosk protections
 │   │   ├── layout.css    # Layout utilities and helpers
 │   │   ├── components.css # Component styles
-│   │   └── components/   # Individual component CSS files (future)
+│   │   └── components/   # Individual component CSS files (shell/desktop/apps/etc)
 │   └── js/               # Modular JavaScript (ES modules)
 │       ├── core/         # Core systems (foundation)
 │       │   ├── display.js # Reference resolution owner
 │       │   ├── viewport.js # Viewport scaling system
 │       │   ├── kiosk.js   # Kiosk mode protections
 │       │   └── index.js   # Core initialization
-│       ├── components/   # Component modules (future)
-│       │   └── index.js   # Component registry
-│       └── utils/        # Utility functions (future)
-│           └── index.js   # Utility namespace
+│       ├── shell/        # Always-mounted shell (Home button + content host)
+│       ├── nav/          # Navigation state machine (startup/desktop/app)
+│       ├── screens/      # Startup/Desktop/AppHost screens
+│       ├── apps/         # Apps plug-ins: src/js/apps/<appId>/app.js
+│       ├── components/   # Reusable UI components (optional / future)
+│       └── utils/        # Utility functions (optional / future)
 ├── public/               # Static assets (copied to dist/ by Vite)
 │   └── assets/           # Static assets
 │       ├── images/       # Image files
@@ -116,7 +121,7 @@ WinnieOS/
 
 ## Baseline Invariants (Keep Us Scalable)
 
-These are the “guardrails” that keep WinnieOS easy to reason about as it grows from a welcome screen into a full pretend OS.
+These are the “guardrails” that keep WinnieOS easy to reason about as it grows from a simple startup/desktop into a full pretend OS.
 
 - **Single coordinate system**: All UI is designed in exactly one reference resolution at a time (default 1280×800).
 - **Canvas size never follows the device**: `#winnieos-canvas` always uses the active reference width/height in px.
@@ -173,9 +178,14 @@ These are the “guardrails” that keep WinnieOS easy to reason about as it gro
 All JavaScript organized under `WinnieOS` namespace:
 ```javascript
 window.WinnieOS = {
+    Display: { ... },      // Reference resolution owner
     Viewport: { ... },      // Viewport scaling
     Kiosk: { ... },         // Kiosk protections
-    Components: { ... },    // Component registry
+    Navigation: { ... },    // Navigation state (startup/desktop/app)
+    Shell: { ... },         // Always-mounted UI shell (Home + screen host)
+    Screens: { ... },       // Screen registry (Startup/Desktop/AppHost)
+    Apps: { ... },          // App registry (auto-discovered)
+    Components: { ... },    // Reusable UI components (optional)
     Utils: { ... }          // Utility functions
 }
 ```
@@ -186,9 +196,11 @@ window.WinnieOS = {
 - `kiosk.js` - Kiosk mode protections (blocks navigation, prevents interactions)
 - `index.js` - Core initialization (runs on DOM ready)
 
-**Components (`js/components/`):**
-- `index.js` - Component registry namespace
-- Future: Individual component modules (Button.js, Card.js, etc.)
+**UI Foundation (startup → desktop → apps):**
+- `js/nav/navigation.js` - Navigation state machine (`startup | desktop | app`)
+- `js/shell/` - Always-mounted shell (Home button + content host)
+- `js/screens/` - Screen implementations (Startup/Desktop/AppHost)
+- `js/apps/` - Apps plug-ins, auto-discovered by Vite (`apps/<appId>/app.js`)
 
 **Utilities (`js/utils/`):**
 - `index.js` - Utility namespace
@@ -199,6 +211,7 @@ window.WinnieOS = {
 2. Core initialization (`core/index.js`)
 3. Utilities (`utils/index.js`)
 4. Components (`components/index.js`)
+5. UI foundation (`apps/`, `nav/`, `screens/`, `shell/`)
 
 **Module System:**
 - All JavaScript uses ES modules (`import`/`export`)
@@ -379,6 +392,15 @@ The production laptop will automatically pull updates on startup via `start.ps1`
 
 ## Adding New Features
 
+### Adding a New App (recommended extension path)
+
+See `DAD.md` for the full guide. Short version:
+
+1. Create: `src/js/apps/<appId>/app.js`
+2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
+3. (Optional) Add an icon in `public/assets/images/apps/...` and use `iconSrc`
+4. Build and commit `dist/` for production updates
+
 ### Adding a New Component
 
 1. **Create CSS file**: `src/css/components/my-component.css`
@@ -416,10 +438,11 @@ The production laptop will automatically pull updates on startup via `start.ps1`
 
 ### Adding a New Screen/Page
 
-1. Create new HTML file or use JavaScript to render
-2. Create CSS file in `css/components/` for screen-specific styles
-3. Create JS file in `js/components/` for screen logic
-4. Add routing logic (future: routing system)
+Screens are mounted inside the Shell (`src/js/shell/`) and switched by `WinnieOS.Navigation`.
+
+1. Create a screen module in `src/js/screens/`
+2. Register it in `src/js/screens/index.js`
+3. If you add a new navigation state (rare), update `src/js/nav/navigation.js` and Shell mounting logic
 
 ### Adding a Utility Function
 

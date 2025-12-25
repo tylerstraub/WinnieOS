@@ -1,0 +1,39 @@
+/* ============================================
+   WINNIEOS APP HOST + APP PLACEHOLDERS
+   Apps are full screen; Shell owns navigation chrome.
+   ============================================ */
+
+.wos-app-host {
+    width: 100%;
+    height: 100%;
+}
+
+.wos-app-root {
+    width: 100%;
+    height: 100%;
+}
+
+/* Simple shared placeholder styling for stub apps */
+.wos-app-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-2xl);
+    text-align: center;
+}
+
+.wos-app-placeholder-title {
+    font-size: var(--font-size-5xl);
+}
+
+.wos-app-placeholder-text {
+    font-size: var(--font-size-xl);
+    color: var(--color-text-muted);
+    max-width: calc(var(--ref-width) - var(--spacing-5xl));
+}
+
+

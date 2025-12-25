@@ -5,6 +5,11 @@
    Import component CSS files here as they are created
    ============================================ */
 
+@import 'components/shell.css';
+@import 'components/startup.css';
+@import 'components/desktop.css';
+@import 'components/apps.css';
+
 /* Base Typography Styles */
 h1 {
     font-size: var(--font-size-5xl); /* 80px at reference */
