@@ -53,8 +53,8 @@ WinnieOS/
 │       ├── nav/          # Navigation state machine (startup/desktop/app)
 │       ├── screens/      # Startup/Desktop/AppHost screens
 │       ├── apps/         # Apps plug-ins: src/js/apps/<appId>/app.js
-│       ├── components/   # Reusable UI components (optional / future)
-│       └── utils/        # Utility functions (optional / future)
+│       ├── components/   # Reusable UI components
+│       └── utils/        # Utility functions (Storage, Background)
 ├── public/               # Static assets (copied to dist/ by Vite)
 │   └── assets/           # Static assets
 │       ├── images/       # Image files
@@ -115,10 +115,10 @@ WinnieOS/
 - It writes the reference into CSS variables:
   - `--ref-width`, `--ref-height`, `--ref-aspect-ratio`
 - It emits a `winnieos:displaychange` event so systems can react (Viewport listens to this)
-- Future "change WinnieOS resolution" UI should call:
-  - `WinnieOS.Display.setReferenceSize({ width, height })`
-  - For temporary/dev testing without saving: `WinnieOS.Display.setReferenceSize({ width, height, persist: false })`
-  - To return to defaults: `WinnieOS.Display.resetReferenceSize()`
+- To change reference resolution programmatically:
+  - `WinnieOS.Display.setReferenceSize({ width, height })` - saves to storage
+  - `WinnieOS.Display.setReferenceSize({ width, height, persist: false })` - temporary/dev testing
+  - `WinnieOS.Display.resetReferenceSize()` - return to defaults
 
 ## Baseline Invariants (Keep Us Scalable)
 
@@ -187,9 +187,10 @@ window.WinnieOS = {
     Shell: { ... },         // Always-mounted UI shell (Home + screen host)
     Screens: { ... },       // Screen registry (Startup/Desktop/AppHost)
     Apps: { ... },          // App registry (auto-discovered, filtered by config)
-    Components: { ... },    // Reusable UI components (optional)
+    Components: { ... },    // Reusable UI components
     Utils: {                // Utility functions
-        Storage: { ... }    // LocalStorage wrapper for persistence
+        Storage: { ... },    // LocalStorage wrapper for persistence
+        Background: { ... }  // Background color management
     }
 }
 ```
@@ -210,12 +211,12 @@ window.WinnieOS = {
 **Utilities (`js/utils/`):**
 - `index.js` - Utility namespace
 - `storage.js` - General-purpose localStorage wrapper with JSON serialization (`WinnieOS.Utils.Storage`)
-- Future: Shared helper functions (DOM helpers, event helpers, etc.)
+- `background.js` - Background color management and persistence (`WinnieOS.Utils.Background`)
 
 **Loading Order (in `src/main.js`):**
 1. Core modules (`display.js`, `viewport.js`, `kiosk.js`) - ES module imports
-2. Core initialization (`core/index.js`)
-3. Utilities (`utils/index.js`)
+2. Core initialization (`core/index.js`) - loads saved background color on startup
+3. Utilities (`utils/index.js`) - Storage, Background, etc.
 4. Components (`components/index.js`)
 5. UI foundation (`apps/`, `nav/`, `screens/`, `shell/`)
 
@@ -479,46 +480,74 @@ Screens are mounted inside the Shell (`src/js/shell/`) and switched by `WinnieOS
    ```
    Note: Utility registry (`utils/index.js`) is already imported in `main.js`
 
-### Using the Storage Utility
+### Using Utilities
+
+#### Storage Utility
 
 WinnieOS provides a general-purpose storage utility for persisting data locally:
 
-**Import the Storage utility:**
+**Import:**
 ```javascript
 import { Storage } from '../utils/storage.js';
 // Or access via namespace: window.WinnieOS.Utils.Storage
 ```
 
-**Basic usage:**
+**Usage:**
 ```javascript
 // Store data (automatically JSON stringified)
 Storage.set('my.key', { data: 'value' });
-Storage.set('user.preferences', { theme: 'dark', volume: 0.8 });
 
 // Retrieve data (with optional default value)
 const value = Storage.get('my.key'); // Returns stored value or null
-const prefs = Storage.get('user.preferences', {}); // Returns stored value or {}
 
 // Check if key exists
-if (Storage.has('my.key')) {
-    // Key exists
-}
+if (Storage.has('my.key')) { /* ... */ }
 
 // Remove a key
 Storage.remove('my.key');
 
 // Get all WinnieOS storage keys (without prefix)
-const keys = Storage.keys(); // Returns array like ['display.reference', 'my.key']
+const keys = Storage.keys();
 
 // Clear all WinnieOS storage
 Storage.clear();
 ```
 
-**Key features:**
-- Automatic key prefixing (`winnieos.` prefix added automatically)
-- JSON serialization (objects, arrays, primitives)
-- Graceful error handling (returns false/null when storage unavailable)
-- Keys are namespaced to avoid conflicts with other applications
+**Features:**
+- Automatic key prefixing (`winnieos.` prefix)
+- JSON serialization
+- Graceful error handling
+- Namespaced keys
+
+#### Background Utility
+
+Manages global background color preferences:
+
+**Import:**
+```javascript
+import { Background } from '../utils/background.js';
+// Or access via namespace: window.WinnieOS.Utils.Background
+```
+
+**Usage:**
+```javascript
+// Apply a color (with auto-generated gradient)
+Background.apply('#667eea');
+
+// Save preference
+Background.save('#667eea');
+
+// Get saved color
+const saved = Background.getSaved(); // Returns hex string or null
+
+// Load and apply saved color (called automatically on startup)
+Background.load();
+```
+
+**Features:**
+- Applies color to body and canvas with natural gradient
+- Persists preferences via Storage utility
+- Auto-loads on application startup
 
 ## Production Deployment
 
@@ -865,13 +894,3 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - **px Units**: Use px units only (no vw/vh inside canvas)
 - **Modular**: One component = one CSS file + one JS file
 - **Namespace**: All JS under `WinnieOS` namespace
-
-## Future Considerations
-
-- Service Worker for offline caching (if needed)
-- Auto-update mechanism improvements
-- Parent/admin mode (currently relies on Alt+F4 in kiosk mode)
-- Application state persistence strategy
-- Routing system for multi-screen navigation
-- Component library expansion
-- Theme system for multiple color themes

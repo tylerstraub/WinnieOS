@@ -7,6 +7,7 @@
 
 // Import utility modules
 import './storage.js';
+import './background.js';
 
 // Utilities namespace
 export const Utils = {};

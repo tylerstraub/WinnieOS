@@ -57,7 +57,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `src/js/components/` - Individual component modules (as features are added)
 - `src/js/utils/index.js` - Utility functions namespace
 - `src/js/utils/storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
-- `src/js/utils/` - Utility modules (as needed)
+- `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
 
 **Build Output:**
 - `dist/` - Production build output (committed, served by Express)
@@ -115,7 +115,8 @@ window.WinnieOS = {
     Apps: { ... },          // App registry (auto-discovered, filtered by config)
     Components: { ... },    // Component registry
     Utils: {                // Utility functions
-        Storage: { ... }    // LocalStorage wrapper for persistence
+        Storage: { ... },    // LocalStorage wrapper for persistence
+        Background: { ... }  // Background color management
     }
 }
 ```
@@ -150,6 +151,7 @@ window.WinnieOS = {
 5. **Simple server**: Express static file server only - no complex backend needed
 6. **Modular architecture**: CSS and JS split into modules for scalability
 7. **Reference resolution**: Everything designed at 1280x800, scales automatically
+8. **Background preferences**: Saved via Storage utility, loaded on startup via `Background.load()`
 
 ## Configuration System
 
@@ -209,7 +211,9 @@ window.WinnieOS = {
 1. Create utility file: `src/js/utils/my-utility.js` (ES module with `export`)
 2. Add to `WinnieOS.Utils` namespace (attach to `window.WinnieOS`)
 3. Import in `src/js/utils/index.js` to register it (utilities are auto-loaded)
-4. Example: `src/js/utils/storage.js` provides `WinnieOS.Utils.Storage` for local persistence
+4. Examples:
+   - `src/js/utils/storage.js` - LocalStorage wrapper (`WinnieOS.Utils.Storage`)
+   - `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
 
 ### Changing Server Configuration
 
@@ -297,7 +301,8 @@ window.WinnieOS = {
    - `src/css/` - Modular CSS files
    - `src/js/core/` - Core systems (ES modules)
    - `src/js/components/` - Component modules (ES modules)
-   - `src/js/utils/` - Utility functions (ES modules)
+   - `src/js/utils/` - Utility functions (Storage, Background)
+   - `src/js/apps/` - App plug-ins (auto-discovered)
    - `dist/` - Production build output (committed)
    - `public/assets/` - Static assets (images, fonts)
 
@@ -324,3 +329,15 @@ The architecture is designed to scale from a simple welcome screen to a full "pr
 - **Testing**: Vitest foundation for unit tests
 
 **Don't over-engineer**: Keep it simple until complexity is needed, then add structure incrementally.
+
+## Current Apps
+
+Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Current apps include:
+- `colors` - Radial color picker for changing background color (uses Background utility)
+- `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story` - Various educational apps
+
+## Current Apps
+
+Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Current apps include:
+- `colors` - Radial color picker for changing background color (uses Background utility)
+- `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story` - Various educational apps

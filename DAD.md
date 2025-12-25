@@ -90,9 +90,36 @@ That’s it—WinnieOS auto-discovers apps via Vite and adds them to the desktop
 
 ## Navigation from inside an app
 
-Apps are “full screen” and should not implement their own header/back button.
+Apps are "full screen" and should not implement their own header/back button.
 
 - Go home: `nav.goHome()`
+
+## Using utilities in apps
+
+### Storage Utility
+
+```javascript
+import { Storage } from '../../utils/storage.js';
+
+// Save data
+Storage.set('myapp.preference', { value: 123 });
+
+// Retrieve data
+const data = Storage.get('myapp.preference');
+```
+
+### Background Utility
+
+```javascript
+import { Background } from '../../utils/background.js';
+
+// Apply and save a color
+Background.apply('#ff0000');
+Background.save('#ff0000');
+
+// Get saved color
+const saved = Background.getSaved();
+```
 
 ## Build + deploy (important)
 

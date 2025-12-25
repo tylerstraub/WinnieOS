@@ -10,6 +10,7 @@ import { Viewport } from './viewport.js';
 import { Kiosk } from './kiosk.js';
 import { RuntimeConfig } from './config.js';
 import { Storage } from '../utils/storage.js';
+import { Background } from '../utils/background.js';
 
 const DISPLAY_STORAGE_KEY = 'display.reference';
 
@@ -66,6 +67,11 @@ function init() {
         Kiosk.init();
     } else {
         console.error('WinnieOS: Kiosk module failed to load');
+    }
+
+    // Load and apply saved background color preference
+    if (Background && typeof Background.load === 'function') {
+        Background.load();
     }
 
     // Apply config-driven default reference resolution (non-persistent) after core is up.

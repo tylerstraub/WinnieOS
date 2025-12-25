@@ -9,6 +9,7 @@
 @import 'components/startup.css';
 @import 'components/desktop.css';
 @import 'components/apps.css';
+@import 'components/apps-colors.css';
 
 /* Base Typography Styles */
 h1 {
