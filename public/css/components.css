@@ -1,0 +1,36 @@
+/* ============================================
+   WINNIEOS COMPONENT STYLES
+   
+   Component-specific styles
+   Import component CSS files here as they are created
+   ============================================ */
+
+/* Base Typography Styles */
+h1 {
+    font-size: var(--font-size-5xl); /* 80px at reference */
+    margin: 0;
+}
+
+h2 {
+    font-size: var(--font-size-4xl); /* 64px at reference */
+    margin: 0;
+}
+
+h3 {
+    font-size: var(--font-size-3xl); /* 48px at reference */
+    margin: 0;
+}
+
+p {
+    font-size: var(--font-size-xl); /* 32px at reference */
+    margin-top: var(--spacing-lg); /* 24px at reference */
+}
+
+/* Component styles will be added here as features are built */
+/* Example structure:
+   - components/button.css
+   - components/card.css
+   - components/modal.css
+   etc.
+*/
+

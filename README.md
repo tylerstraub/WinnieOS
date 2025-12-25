@@ -12,6 +12,7 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 - **Kiosk Mode**: Full-screen Chromium browser with minimal UI distractions
 - **Touch-Friendly**: Optimized for touch interactions while encouraging keyboard use
 - **Development-Friendly**: Simple development workflow separate from production deployment
+- **Scalable Architecture**: Modular structure ready to grow from simple welcome screen to full "pretend OS"
 
 ## Architecture
 
@@ -22,6 +23,7 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 - **Service Manager**: node-windows (Windows Service integration)
 - **Logging**: Winston (file-based logging)
 - **Browser**: Chromium/Chrome in kiosk mode
+- **Frontend**: Vanilla JavaScript, modular CSS (no frameworks)
 
 ### Project Structure
 
@@ -29,7 +31,24 @@ WinnieOS is a kid-friendly computing environment designed to introduce toddlers 
 WinnieOS/
 ├── public/                 # Web application files (HTML, CSS, JS)
 │   ├── index.html         # Main entry point
-│   └── assets/            # Static assets (images, fonts, etc.)
+│   ├── css/               # Modular stylesheets
+│   │   ├── tokens.css     # Design tokens (CSS custom properties)
+│   │   ├── base.css       # Reset, normalize, canvas, kiosk protections
+│   │   ├── layout.css     # Layout utilities and helpers
+│   │   ├── components.css # Component styles
+│   │   └── components/    # Individual component CSS files (future)
+│   ├── js/                # Modular JavaScript
+│   │   ├── core/          # Core systems (foundation)
+│   │   │   ├── viewport.js # Viewport scaling system
+│   │   │   ├── kiosk.js    # Kiosk mode protections
+│   │   │   └── index.js    # Core initialization
+│   │   ├── components/    # Component modules (future)
+│   │   │   └── index.js    # Component registry
+│   │   └── utils/         # Utility functions (future)
+│   │       └── index.js    # Utility namespace
+│   └── assets/            # Static assets
+│       ├── images/        # Image files
+│       └── fonts/          # Font files
 ├── config/
 │   ├── default.json       # Default configuration (committed)
 │   ├── local.json.example # Template for local config (committed)
@@ -47,10 +66,88 @@ WinnieOS/
 ├── server.js              # Express web server (production)
 ├── server-dev.js          # Development server with hot reload (browser-sync)
 ├── package.json           # Node.js dependencies and scripts
-├── README.md              # Detailed development reference guide
+├── README.md              # This file
 ├── AGENTS.md              # Context for AI agents
 └── .gitignore            # Git ignore rules
 ```
+
+### Frontend Architecture
+
+#### Design Foundation
+
+**Reference Resolution: 1280x800 (16:10 aspect ratio)**
+- All UI elements are designed and sized for this resolution
+- Canvas is always 1280x800px (never changes)
+- JavaScript applies CSS transform scale to fit viewport
+- At reference resolution: scale = 1.0, fills perfectly
+- On other resolutions: scales proportionally, maintains aspect ratio
+
+**Design Tokens (CSS Custom Properties)**
+- Typography scale: `--font-size-xs` through `--font-size-6xl`
+- Spacing scale: `--spacing-xs` through `--spacing-5xl`
+- Colors: `--color-primary`, `--color-secondary`, `--color-text`
+- Touch targets: `--touch-target-min`, `--touch-target-comfortable`
+- All values in px, designed for 1280x800 reference
+- See `public/css/tokens.css` for complete list
+
+**Unit System**
+- Use px units for all sizing (designed at 1280x800)
+- Never use viewport units (vw/vh) inside canvas
+- Scaling handled automatically via CSS transform
+- Design tokens ensure consistency
+
+#### CSS Architecture
+
+**File Organization:**
+- `css/tokens.css` - Design tokens (CSS custom properties only)
+- `css/base.css` - Reset, normalize, canvas styling, kiosk protections
+- `css/layout.css` - Layout utilities (spacing, typography, display)
+- `css/components.css` - Component styles and imports
+- `css/components/` - Individual component CSS files (as features are added)
+
+**Loading Order:**
+1. `tokens.css` - Design tokens must load first
+2. `base.css` - Base styles depend on tokens
+3. `layout.css` - Utilities depend on tokens
+4. `components.css` - Components depend on tokens and base
+
+**CSS Principles:**
+- Always use design tokens (`var(--spacing-lg)`)
+- Use px units only (designed for 1280x800)
+- One component = one CSS file
+- Use utility classes for common patterns
+
+#### JavaScript Architecture
+
+**Namespace Structure:**
+All JavaScript organized under `WinnieOS` namespace:
+```javascript
+window.WinnieOS = {
+    Viewport: { ... },      // Viewport scaling
+    Kiosk: { ... },         // Kiosk protections
+    Components: { ... },    // Component registry
+    Utils: { ... }          // Utility functions
+}
+```
+
+**Core Systems (`js/core/`):**
+- `viewport.js` - Viewport scaling system (calculates scale, applies transform)
+- `kiosk.js` - Kiosk mode protections (blocks navigation, prevents interactions)
+- `index.js` - Core initialization (runs on DOM ready)
+
+**Components (`js/components/`):**
+- `index.js` - Component registry namespace
+- Future: Individual component modules (Button.js, Card.js, etc.)
+
+**Utilities (`js/utils/`):**
+- `index.js` - Utility namespace
+- Future: Shared helper functions (DOM helpers, event helpers, etc.)
+
+**Loading Order:**
+1. Core modules (`viewport.js`, `kiosk.js`)
+2. Core initialization (`core/index.js`)
+3. Utilities (`utils/index.js`)
+4. Components (`components/index.js`)
 
 ### Key Components
 
@@ -145,10 +242,10 @@ This will:
 
 **Note**: If any prerequisites are missing, the setup script will provide clear instructions on what to install.
 
-3. (Optional) Edit `config/local.json` to customize:
-   - Server port (default: 3000)
-   - Logging level (default: info)
-   - Chromium path (if not using auto-detection)
+**Step 4: (Optional) Edit `config/local.json`** to customize:
+- Server port (default: 3000)
+- Logging level (default: info)
+- Chromium path (if not using auto-detection)
 
 ### Development Mode
 
@@ -195,6 +292,53 @@ This will:
 ### Testing on Production Laptop
 
 The production laptop will automatically pull updates on startup via `start.ps1`.
+
+## Adding New Features
+
+### Adding a New Component
+
+1. **Create CSS file**: `public/css/components/my-component.css`
+   ```css
+   .my-component {
+       padding: var(--spacing-lg);
+       font-size: var(--font-size-base);
+   }
+   ```
+
+2. **Import in `components.css`**:
+   ```css
+   @import 'components/my-component.css';
+   ```
+
+3. **Create JS file**: `public/js/components/MyComponent.js`
+   ```javascript
+   (function() {
+       'use strict';
+       const WinnieOS = window.WinnieOS;
+       
+       WinnieOS.Components.MyComponent = {
+           init: function() { ... }
+       };
+   })();
+   ```
+
+4. **Add script tag to `index.html`**:
+   ```html
+   <script src="js/components/MyComponent.js"></script>
+   ```
+
+### Adding a New Screen/Page
+
+1. Create new HTML file or use JavaScript to render
+2. Create CSS file in `css/components/` for screen-specific styles
+3. Create JS file in `js/components/` for screen logic
+4. Add routing logic (future: routing system)
+
+### Adding a Utility Function
+
+1. Create utility file: `js/utils/my-utility.js`
+2. Add to `WinnieOS.Utils` namespace
+3. Import in `index.html` or use module loader
 
 ## Production Deployment
 
@@ -477,6 +621,16 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Keep code simple and readable
 - Comment complex logic
 - Follow existing patterns
+- Use design tokens for styling
+- One component = one CSS file + one JS file
+
+### Design Principles
+
+- **Reference Resolution**: Everything designed at 1280x800px
+- **Design Tokens**: Always use CSS custom properties
+- **px Units**: Use px units only (no vw/vh inside canvas)
+- **Modular**: One component = one CSS file + one JS file
+- **Namespace**: All JS under `WinnieOS` namespace
 
 ## Future Considerations
 
@@ -484,8 +638,10 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Auto-update mechanism improvements
 - Parent/admin mode (currently relies on Alt+F4 in kiosk mode)
 - Application state persistence strategy
+- Routing system for multi-screen navigation
+- Component library expansion
+- Theme system for multiple color themes
 
 ## License
 
 ISC
-

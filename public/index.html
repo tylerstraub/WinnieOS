@@ -4,119 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WinnieOS</title>
+    
+    <!-- CSS: Foundation and Design System -->
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    
     <style>
         /* ============================================
-           CSS RESET / NORMALIZE
-           Consistent base styling across browsers
+           WINNIEOS FOUNDATION PRINCIPLES
+           
+           REFERENCE RESOLUTION: 1280x800 (16:10 aspect ratio)
+           - This is the absolute reference point for all design decisions
+           - All UI elements are designed and sized for this resolution
+           - The entire application scales from this single reference point
+           
+           DOCUMENTATION:
+           - See README.md for complete principles and architecture
+           - See AGENTS.md for development context
+           - All developers must understand these principles before making changes
            ============================================ */
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-        }
-
-        html, body {
-            height: 100%;
-        }
-
-        body {
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        img, picture, video, canvas, svg {
-            display: block;
-            max-width: 100%;
-        }
-
-        input, button, textarea, select {
-            font: inherit;
-        }
-
-        p, h1, h2, h3, h4, h5, h6 {
-            overflow-wrap: break-word;
-        }
-
-        /* ============================================
-           KIOSK PROTECTIONS
-           Prevent accidental browser interactions
-           ============================================ */
-        body, #winnieos-canvas {
-            /* Disable text selection - cleaner UX for kids */
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            
-            /* Disable tap highlight on touch devices */
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Allow text selection only in input fields (for future forms) */
-        input, textarea {
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            user-select: text;
-        }
-
-        /* ============================================
-           BASE VIEWPORT
-           Full screen container
-           ============================================ */
-        body {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-            position: relative;
-            background: #667eea; /* Match canvas gradient start color for seamless appearance */
-        }
-
-        /* ============================================
-           DESIGN CANVAS
-           Designed at 1280x800 (16:10 reference resolution)
-           All UI elements should be sized relative to this canvas
-           ============================================ */
-        #winnieos-canvas {
-            width: 1280px;
-            height: 800px;
-            position: relative;
-            transform-origin: top left;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            color: white;
-        }
-
-
-        /* ============================================
-           APPLICATION STYLES
-           Add app-specific styles below
-           ============================================ */
-        .container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 80px; /* Sized for 1280px width */
-            margin: 0;
-        }
-
-        p {
-            font-size: 32px; /* Sized for 1280px width */
-            margin-top: 20px;
-        }
     </style>
 </head>
 <body>
@@ -127,170 +35,16 @@
         </div>
     </div>
 
-    <script>
-        /**
-         * WinnieOS Core
-         * Foundation layer for the entire OS
-         * Organized as a namespace for scalable architecture
-         */
-        (function() {
-            'use strict';
-
-            const WinnieOS = window.WinnieOS = window.WinnieOS || {};
-
-            /* ============================================
-               VIEWPORT SCALING
-               Scales 1280x800 design to fit any viewport
-               Target resolution (1280x800) fills screen completely
-               ============================================ */
-            WinnieOS.Viewport = (function() {
-                const DESIGN_WIDTH = 1280;
-                const DESIGN_HEIGHT = 800;
-                const canvas = document.getElementById('winnieos-canvas');
-                const TOLERANCE = 1; // 1px tolerance for exact match detection
-
-                function updateScale() {
-                    const viewportWidth = window.innerWidth;
-                    const viewportHeight = window.innerHeight;
-
-                    // If viewport matches target resolution (with tolerance), fill completely
-                    // Check if aspect ratio matches and dimensions are close
-                    const targetAspect = DESIGN_WIDTH / DESIGN_HEIGHT; // 1.6 (16:10)
-                    const viewportAspect = viewportWidth / viewportHeight;
-                    const aspectMatch = Math.abs(viewportAspect - targetAspect) < 0.01;
-                    const widthMatch = Math.abs(viewportWidth - DESIGN_WIDTH) <= 50; // 50px tolerance
-                    const heightMatch = Math.abs(viewportHeight - DESIGN_HEIGHT) <= 50;
-
-                    if (aspectMatch && (widthMatch || heightMatch)) {
-                        // Fill viewport completely at target resolution/aspect ratio
-                        canvas.style.width = '100vw';
-                        canvas.style.height = '100vh';
-                        canvas.style.transform = 'none';
-                        canvas.style.position = 'fixed';
-                        canvas.style.top = '0';
-                        canvas.style.left = '0';
-                        canvas.style.margin = '0';
-                        canvas.style.padding = '0';
-                        document.body.style.display = 'block';
-                        document.body.style.justifyContent = 'normal';
-                        document.body.style.alignItems = 'normal';
-                    } else {
-                        // For other resolutions, scale to fit while maintaining aspect ratio
-                        document.body.style.display = 'flex';
-                        document.body.style.justifyContent = 'center';
-                        document.body.style.alignItems = 'center';
-                        const scaleX = viewportWidth / DESIGN_WIDTH;
-                        const scaleY = viewportHeight / DESIGN_HEIGHT;
-                        const scale = Math.min(scaleX, scaleY);
-
-                        // Reset to original size and apply scale transform
-                        canvas.style.width = DESIGN_WIDTH + 'px';
-                        canvas.style.height = DESIGN_HEIGHT + 'px';
-                        canvas.style.transform = `scale(${scale})`;
-                        canvas.style.position = 'relative';
-                        canvas.style.margin = '';
-                        canvas.style.padding = '';
-                    }
-                }
-
-                // Public API
-                return {
-                    init: function() {
-                        updateScale();
-                        window.addEventListener('resize', updateScale);
-                    }
-                };
-            })();
-
-            /* ============================================
-               KIOSK PROTECTIONS
-               Prevents browser navigation and accidental interactions
-               ============================================ */
-            WinnieOS.Kiosk = (function() {
-                // Disable context menu (right-click)
-                function disableContextMenu(e) {
-                    e.preventDefault();
-                    return false;
-                }
-
-                // Block browser navigation shortcuts
-                function blockNavigation(e) {
-                    // Block F5 (refresh)
-                    if (e.key === 'F5') {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Block Ctrl+R, Ctrl+Shift+R (refresh)
-                    if (e.ctrlKey && (e.key === 'r' || e.key === 'R')) {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Block Alt+Left/Right (back/forward navigation)
-                    if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Block browser backspace navigation (when not in input)
-                    if (e.key === 'Backspace' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable) {
-                        e.preventDefault();
-                        return false;
-                    }
-
-                    // Block Ctrl+W, Ctrl+Shift+W (close window/tab)
-                    if (e.ctrlKey && (e.key === 'w' || e.key === 'W')) {
-                        e.preventDefault();
-                        return false;
-                    }
-                }
-
-                // Disable drag-to-scroll gestures (reinforce Chrome args)
-                function preventDragScroll(e) {
-                    if (e.button === 1) { // Middle mouse button
-                        e.preventDefault();
-                        return false;
-                    }
-                }
-
-                // Public API
-                return {
-                    init: function() {
-                        // Context menu prevention
-                        document.addEventListener('contextmenu', disableContextMenu);
-                        
-                        // Navigation blocking
-                        document.addEventListener('keydown', blockNavigation);
-                        
-                        // Drag scroll prevention
-                        document.addEventListener('mousedown', preventDragScroll);
-                        
-                        // Prevent default browser drag behaviors
-                        document.addEventListener('dragstart', function(e) {
-                            e.preventDefault();
-                            return false;
-                        });
-                    }
-                };
-            })();
-
-            /* ============================================
-               INITIALIZATION
-               Initialize all core systems on DOM ready
-               ============================================ */
-            function init() {
-                WinnieOS.Viewport.init();
-                WinnieOS.Kiosk.init();
-            }
-
-            // Initialize when DOM is ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', init);
-            } else {
-                init();
-            }
-        })();
-    </script>
+    <!-- JavaScript: Core Systems -->
+    <!-- Load order matters: core modules first, then initialization -->
+    <script src="js/core/viewport.js"></script>
+    <script src="js/core/kiosk.js"></script>
+    <script src="js/core/index.js"></script>
+    
+    <!-- JavaScript: Utilities (load before components) -->
+    <script src="js/utils/index.js"></script>
+    
+    <!-- JavaScript: Components (load after utilities) -->
+    <script src="js/components/index.js"></script>
 </body>
 </html>

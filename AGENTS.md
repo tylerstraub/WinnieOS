@@ -4,7 +4,7 @@ This document provides essential context for AI agents working on the WinnieOS p
 
 ## Project Overview
 
-WinnieOS is a kid-friendly computing environment: a local web application that runs in Chromium kiosk mode on Windows 11, optimized for an 8" laptop (1280x800, 16:10). It's designed to introduce toddlers to basic computing concepts.
+WinnieOS is a kid-friendly computing environment: a local web application that runs in Chromium kiosk mode on Windows 11, optimized for an 8" laptop (1280x800, 16:10). It's designed to introduce toddlers to basic computing concepts and will eventually grow into a full "pretend OS" experience.
 
 **Key Principle**: The entire application runs locally and offline after initial setup. Updates are pulled from GitHub on startup via git pull.
 
@@ -15,16 +15,87 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - **Configuration**: JSON-based config system with defaults + local overrides
 - **Logging**: Winston file-based logging to `logs/winnieos.log`
 - **Browser**: Chromium/Chrome launched in kiosk mode via PowerShell
+- **Frontend**: Modular CSS and JavaScript architecture, scalable from simple welcome screen to full OS
 
 ## Critical File Locations
 
+### Server & Infrastructure
 - `server.js` - Express web server (production, simple static file server)
 - `server-dev.js` - Development server with hot reload (browser-sync)
-- `public/` - Web application files (HTML, CSS, JS) - this is where the UI lives
 - `config/default.json` - Default configuration (committed)
 - `config/local.json` - Local overrides (gitignored, not synced)
 - `scripts/` - PowerShell and Node.js scripts for setup/management
 - `logs/winnieos.log` - Application logs (gitignored)
+
+### Frontend Architecture
+
+**Entry Point:**
+- `public/index.html` - Main HTML file, loads all CSS and JS modules
+
+**CSS (Modular Stylesheets):**
+- `public/css/tokens.css` - Design tokens (CSS custom properties)
+- `public/css/base.css` - Reset, normalize, canvas styling, kiosk protections
+- `public/css/layout.css` - Layout utilities (spacing, typography, display)
+- `public/css/components.css` - Component styles and imports
+- `public/css/components/` - Individual component CSS files (as features are added)
+
+**JavaScript (Modular Modules):**
+- `public/js/core/viewport.js` - Viewport scaling system
+- `public/js/core/kiosk.js` - Kiosk mode protections
+- `public/js/core/index.js` - Core initialization
+- `public/js/components/index.js` - Component registry namespace
+- `public/js/components/` - Individual component modules (as features are added)
+- `public/js/utils/index.js` - Utility functions namespace
+- `public/js/utils/` - Utility modules (as needed)
+
+**Assets:**
+- `public/assets/images/` - Image files
+- `public/assets/fonts/` - Font files
+
+## Frontend Foundation Principles
+
+### Reference Resolution System
+
+**Critical**: 1280x800 (16:10 aspect ratio) is the absolute reference point.
+
+- Canvas (`#winnieos-canvas`) is ALWAYS 1280x800px (never changes)
+- All UI elements use px units (designed for 1280x800)
+- JavaScript applies CSS transform scale to fit viewport
+- At reference resolution: scale = 1.0, fills perfectly
+- On other resolutions: scales proportionally, maintains aspect ratio
+
+**DO NOT:**
+- Use viewport units (vw/vh) inside canvas
+- Change canvas size based on viewport
+- Manually calculate scaling in CSS
+
+**DO:**
+- Use px units for all sizing
+- Use CSS custom properties (design tokens)
+- Design everything at 1280x800
+- Let JavaScript handle scaling automatically
+
+### Design Tokens
+
+All styling values are defined as CSS custom properties in `css/tokens.css`:
+- Typography: `--font-size-xs` through `--font-size-6xl`
+- Spacing: `--spacing-xs` through `--spacing-5xl`
+- Colors: `--color-primary`, `--color-secondary`, `--color-text`
+- Touch targets: `--touch-target-min`, `--touch-target-comfortable`
+
+Always use design tokens, never hardcode values.
+
+### JavaScript Namespace
+
+All JavaScript organized under `WinnieOS` namespace:
+```javascript
+window.WinnieOS = {
+    Viewport: { ... },      // Viewport scaling
+    Kiosk: { ... },         // Kiosk protections
+    Components: { ... },    // Component registry
+    Utils: { ... }          // Utility functions
+}
+```
 
 ## Development vs Production
 
@@ -50,6 +121,8 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 3. **Browser state persists**: localStorage/IndexedDB not affected by code updates
 4. **No admin mode needed**: Kiosk mode can be exited with Alt+F4 (toddlers unlikely to discover)
 5. **Simple server**: Express static file server only - no complex backend needed
+6. **Modular architecture**: CSS and JS split into modules for scalability
+7. **Reference resolution**: Everything designed at 1280x800, scales automatically
 
 ## Configuration System
 
@@ -81,10 +154,22 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 ### Adding New Features
 
-1. Edit files in `public/` directory
-2. Test locally with `npm run dev` (hot reload) or `npm start` (production-like)
-3. Verify changes work
-4. Commit and push
+**Adding a Component:**
+1. Create CSS file: `public/css/components/my-component.css`
+2. Import in `components.css`: `@import 'components/my-component.css';`
+3. Create JS file: `public/js/components/MyComponent.js`
+4. Register in `WinnieOS.Components` namespace
+5. Add script tag to `index.html`
+
+**Adding a Screen/Page:**
+1. Create CSS file in `css/components/` for screen-specific styles
+2. Create JS file in `js/components/` for screen logic
+3. Add routing logic (future: routing system)
+
+**Adding a Utility:**
+1. Create utility file: `js/utils/my-utility.js`
+2. Add to `WinnieOS.Utils` namespace
+3. Import in `index.html`
 
 ### Changing Server Configuration
 
@@ -120,6 +205,29 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 5. **Service runs as background process** - Don't expect console output, check logs instead
 6. **Chromium path auto-detection** - Script tries common paths if not configured
 7. **Git branch detection** - Scripts detect current branch, don't hardcode "main"
+8. **Reference resolution** - Everything designed at 1280x800px, scales automatically
+9. **Design tokens** - Always use CSS custom properties, never hardcode values
+10. **Modular structure** - One component = one CSS file + one JS file
+11. **Namespace** - All JS under `WinnieOS` namespace
+12. **px units only** - Use px units for sizing (no vw/vh inside canvas)
+
+## CSS Architecture Guidelines
+
+- **Design tokens first**: Always use CSS custom properties from `tokens.css`
+- **Modular files**: One component = one CSS file in `css/components/`
+- **Loading order**: tokens → base → layout → components
+- **px units**: All sizing in px (designed for 1280x800)
+- **No viewport units**: Don't use vw/vh inside canvas
+- **Utility classes**: Use layout utilities for common patterns
+
+## JavaScript Architecture Guidelines
+
+- **Namespace**: All code under `WinnieOS` namespace
+- **IIFE pattern**: Wrap modules in `(function() { 'use strict'; ... })()`
+- **Modular files**: One feature = one file
+- **Loading order**: core → utils → components
+- **Documentation**: Document public APIs
+- **No globals**: Don't pollute global scope outside namespace
 
 ## Testing Approach
 
@@ -127,14 +235,19 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - **Scripts**: Syntax validation, dry-run where possible
 - **Service**: Requires admin, test on production laptop only
 - **Git operations**: Handle gracefully when not in git repo or remote not configured
+- **Viewport scaling**: Test at 1280x800 (reference) and other resolutions
+- **Design tokens**: Verify CSS custom properties are accessible
 
 ## When Starting Fresh Context
 
-1. Read this file (AGENTS.md) for quick context
-2. Check README.md for detailed information
-3. Review recent git commits/logs for what's been worked on
-4. Check `logs/winnieos.log` if debugging issues
-5. Verify project structure matches expected layout
+1. Check README.md for detailed information
+2. Review recent git commits/logs for what's been worked on
+3. Check `logs/winnieos.log` if debugging issues
+4. Verify project structure matches expected layout:
+   - `public/css/` - Modular CSS files
+   - `public/js/core/` - Core systems
+   - `public/js/components/` - Component modules
+   - `public/js/utils/` - Utility functions
 
 ## Target Device Context
 
@@ -142,5 +255,17 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - Windows 11
 - Touch + Keyboard input
 - Chromium-based browser in kiosk mode
-- Optimize UI for this specific resolution
+- Optimize UI for this specific resolution (reference point)
+- Scales to other resolutions automatically
 
+## Scalability Considerations
+
+The architecture is designed to scale from a simple welcome screen to a full "pretend OS":
+
+- **Modular CSS**: Easy to add component styles
+- **Modular JS**: Easy to add components and utilities
+- **Component system**: Foundation ready for component library
+- **Design tokens**: Consistent styling across all features
+- **Namespace structure**: Prevents conflicts as codebase grows
+
+**Don't over-engineer**: Keep it simple until complexity is needed, then add structure incrementally.

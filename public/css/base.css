@@ -1,0 +1,124 @@
+/* ============================================
+   WINNIEOS BASE STYLES
+   
+   CSS Reset / Normalize
+   Consistent base styling across browsers
+   ============================================ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+}
+
+body {
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+img, picture, video, canvas, svg {
+    display: block;
+    max-width: 100%;
+}
+
+input, button, textarea, select {
+    font: inherit;
+}
+
+p, h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
+}
+
+/* ============================================
+   KIOSK PROTECTIONS
+   Prevent accidental browser interactions
+   ============================================ */
+body, #winnieos-canvas {
+    /* Disable text selection - cleaner UX for kids */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    
+    /* Disable tap highlight on touch devices */
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Allow text selection only in input fields (for future forms) */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+/* ============================================
+   BASE VIEWPORT
+   Full screen container - always fills viewport
+   ============================================ */
+body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    background: var(--color-primary); /* Match canvas gradient start color for seamless appearance */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ============================================
+   DESIGN CANVAS
+   Reference Resolution: 1280x800 (16:10)
+   
+   CRITICAL PRINCIPLES:
+   1. Canvas is ALWAYS 1280x800px (reference size)
+   2. All content inside uses px units (designed for reference)
+   3. JavaScript applies transform scale to fit viewport
+   4. At reference resolution: scale = 1.0, fills perfectly
+   5. On other resolutions: scales proportionally, maintains aspect
+   
+   DO NOT:
+   - Use viewport units (vw/vh) inside canvas
+   - Change canvas size based on viewport
+   - Use percentage-based sizing (except for layout containers)
+   - Manually calculate scaling in CSS
+   
+   DO:
+   - Use px units for all sizing
+   - Use CSS custom properties (design tokens)
+   - Design everything at 1280x800
+   - Let JavaScript handle scaling automatically
+   ============================================ */
+#winnieos-canvas {
+    /* Reference size - NEVER CHANGE THESE VALUES */
+    width: var(--ref-width);  /* 1280px */
+    height: var(--ref-height); /* 800px */
+    
+    /* Positioning and layout */
+    position: relative;
+    transform-origin: center center; /* Scale from center */
+    
+    /* Visual styling */
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    font-family: var(--font-family);
+    color: var(--color-text);
+    
+    /* Prevent subpixel rendering issues */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    
+    /* Initial transform (will be updated by JavaScript) */
+    transform: scale(1);
+}
+
