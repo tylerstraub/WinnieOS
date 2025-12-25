@@ -115,6 +115,14 @@
     /* Native horizontal swipe/scroll (now that we start at scrollLeft=0) */
     touch-action: pan-x;
     -webkit-overflow-scrolling: touch;
+    /* Performance optimizations for smooth scrolling on slower devices */
+    /* Promote to GPU layer for hardware-accelerated scrolling */
+    transform: translateZ(0);
+    will-change: scroll-position;
+    /* CSS containment to optimize repaints during scroll */
+    contain: layout style paint;
+    /* Prevent scroll chaining to parent */
+    overscroll-behavior-x: contain;
 }
 
 .wos-notepad-emoji-strip-inner::-webkit-scrollbar {
