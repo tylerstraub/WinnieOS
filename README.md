@@ -32,30 +32,43 @@ WinnieOS/
 │   └── assets/            # Static assets (images, fonts, etc.)
 ├── config/
 │   ├── default.json       # Default configuration (committed)
-│   └── local.json.example # Template for local config (committed)
+│   ├── local.json.example # Template for local config (committed)
 │   └── local.json         # Local overrides (gitignored)
 ├── scripts/
 │   ├── install-service.js # Node.js script for Windows Service install/uninstall
 │   ├── install-service.ps1 # PowerShell wrapper for service installation
 │   ├── setup.ps1          # Initial setup script
 │   ├── start.ps1          # Startup script (git pull, start service, launch browser)
-│   └── restart.ps1        # Remote restart script
+│   ├── restart.ps1        # Remote restart script
+│   ├── setup-task-scheduler.ps1 # Task Scheduler setup script
+│   └── debug-startup.ps1  # Debug script for startup issues
 ├── logs/                  # Application logs (gitignored)
 │   └── winnieos.log
-├── server.js              # Express web server
+├── server.js              # Express web server (production)
+├── server-dev.js          # Development server with hot reload (browser-sync)
 ├── package.json           # Node.js dependencies and scripts
+├── README.md              # Detailed development reference guide
+├── AGENTS.md              # Context for AI agents
 └── .gitignore            # Git ignore rules
 ```
 
 ### Key Components
 
-#### Web Server (`server.js`)
+#### Web Server
 
-- Express.js static file server
-- Serves files from `public/` directory
-- Configurable port (default: 3000)
-- File-based logging via Winston
-- Graceful shutdown handling
+- **`server.js`**: Production Express.js static file server
+  - Serves files from `public/` directory
+  - Configurable port (default: 3000)
+  - File-based logging via Winston
+  - Graceful shutdown handling
+  - Used by Windows Service in production
+
+- **`server-dev.js`**: Development server with hot reload
+  - Uses browser-sync for automatic browser reloading
+  - CSS changes inject instantly (no page reload)
+  - HTML/JS changes trigger automatic reload
+  - Watches `public/` directory for file changes
+  - Used via `npm run dev` for local development
 
 #### Configuration System
 
@@ -141,7 +154,18 @@ This will:
 
 **On your development machine:**
 
-1. Start the server:
+1. Start the development server with hot reload:
+   ```powershell
+   npm run dev
+   ```
+   This uses `server-dev.js` with browser-sync for automatic browser reloading.
+
+2. Access the application:
+   - Open browser to `http://localhost:3000`
+   - Make changes to files in `public/`
+   - Browser automatically reloads on file changes (CSS changes inject instantly)
+
+3. For production-like server (without hot reload):
    ```powershell
    npm start
    ```
@@ -150,12 +174,7 @@ This will:
    node server.js
    ```
 
-2. Access the application:
-   - Open browser to `http://localhost:3000`
-   - Make changes to files in `public/`
-   - Refresh browser to see changes
-
-3. View logs:
+4. View logs:
    ```powershell
    Get-Content logs\winnieos.log -Tail 50 -Wait
    ```
@@ -165,7 +184,7 @@ This will:
 ### Making Changes
 
 1. Edit files in `public/` directory (HTML, CSS, JavaScript)
-2. Test locally with `npm start`
+2. Test locally with `npm run dev` (automatic hot reload) or `npm start` (production-like)
 3. Commit changes:
    ```powershell
    git add .
@@ -364,8 +383,8 @@ Service installation wrapper. Requires Administrator privileges.
 
 ### npm Scripts
 
-- `npm start` - Start the server (development mode)
-- `npm run dev` - Alias for `npm start`
+- `npm start` - Start the production server (`server.js`)
+- `npm run dev` - Start the development server with hot reload (`server-dev.js`)
 - `npm run install-service` - Install Windows Service
 - `npm run uninstall-service` - Uninstall Windows Service
 
@@ -465,7 +484,6 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Auto-update mechanism improvements
 - Parent/admin mode (currently relies on Alt+F4 in kiosk mode)
 - Application state persistence strategy
-- Development hot-reload for faster iteration
 
 ## License
 

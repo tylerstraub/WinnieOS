@@ -18,7 +18,8 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 ## Critical File Locations
 
-- `server.js` - Express web server (simple static file server)
+- `server.js` - Express web server (production, simple static file server)
+- `server-dev.js` - Development server with hot reload (browser-sync)
 - `public/` - Web application files (HTML, CSS, JS) - this is where the UI lives
 - `config/default.json` - Default configuration (committed)
 - `config/local.json` - Local overrides (gitignored, not synced)
@@ -29,7 +30,8 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 ### Development Workflow (Developer's Machine)
 
-- Run `npm start` to start server normally
+- Run `npm run dev` for development server with hot reload (browser-sync)
+- Or run `npm start` for production-like server (no hot reload)
 - No Windows Service needed
 - Access at `http://localhost:3000`
 - Make changes, test, commit, push
@@ -80,7 +82,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 ### Adding New Features
 
 1. Edit files in `public/` directory
-2. Test locally with `npm start`
+2. Test locally with `npm run dev` (hot reload) or `npm start` (production-like)
 3. Verify changes work
 4. Commit and push
 
@@ -101,7 +103,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 1. Check logs: `logs/winnieos.log`
 2. Verify service status: `Get-Service "WinnieOS Server"`
 3. Check git status: ensure remote is configured
-4. Test server manually: `npm start`
+4. Test server manually: `npm start` (production server) or `npm run dev` (dev server)
 
 ### Testing Scripts
 
@@ -121,7 +123,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 ## Testing Approach
 
-- **Development**: Manual testing with `npm start`, browser at localhost:3000
+- **Development**: Use `npm run dev` for hot reload, or `npm start` for production-like server, browser at localhost:3000
 - **Scripts**: Syntax validation, dry-run where possible
 - **Service**: Requires admin, test on production laptop only
 - **Git operations**: Handle gracefully when not in git repo or remote not configured
