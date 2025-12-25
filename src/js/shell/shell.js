@@ -78,7 +78,7 @@ function unmountActive() {
     activeScreen = null;
 }
 
-function mountForState(state) {
+async function mountForState(state) {
     if (!contentEl || !shellEl) return;
     const screenName = state && state.screen ? state.screen : 'desktop';
     shellEl.dataset.screen = screenName;
@@ -93,12 +93,20 @@ function mountForState(state) {
     activeScreen = next;
     activeKey = nextKey;
     if (activeScreen && typeof activeScreen.mount === 'function') {
-        activeScreen.mount({
-            root: contentEl,
-            nav: Navigation,
-            apps: Apps,
-            appId: state && state.appId
-        });
+        try {
+            const mountResult = activeScreen.mount({
+                root: contentEl,
+                nav: Navigation,
+                apps: Apps,
+                appId: state && state.appId
+            });
+            // Handle async mount if it returns a promise
+            if (mountResult && typeof mountResult.then === 'function') {
+                await mountResult;
+            }
+        } catch (err) {
+            console.error('Shell: Error mounting screen', err);
+        }
     }
 }
 

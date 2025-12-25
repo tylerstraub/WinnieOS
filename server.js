@@ -61,10 +61,10 @@ if (!fs.existsSync(distPath)) {
 app.get('/winnieos-config.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
-  res.status(200).send(JSON.stringify({
+  res.status(200).json({
     display: config.display,
     apps: config.apps
-  }));
+  });
 });
 
 app.use(express.static(distPath));

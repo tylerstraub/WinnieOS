@@ -84,34 +84,27 @@ export const DesktopScreen = (function() {
     }
 
     return {
-        mount: function(ctx) {
+        mount: async function(ctx) {
             const root = ctx && ctx.root;
             const nav = ctx && ctx.nav;
             const apps = ctx && ctx.apps;
             if (!root || !nav || !apps) return;
 
-            // Render immediately with current app list
-            renderDesktop(root, nav, apps);
-
-            // Ensure config loads and re-render if app list changes (config filters apps)
-            // This handles the race condition where DesktopScreen mounts before config loads
-            const initialCount = apps.list().length;
+            // CRITICAL: Wait for config to load before rendering to avoid race condition
+            // If Apps.list() is called before config loads, it returns ALL apps (backward compatible fallback)
+            // We need to ensure config is loaded so filtering works correctly
             if (apps.refreshConfig && typeof apps.refreshConfig === 'function') {
-                // Trigger config refresh - this will reload config if not already loaded
-                // If already loaded, it will reload the same config (acceptable for correctness)
-                apps.refreshConfig().then(() => {
-                    // Config loaded - check if app list changed and re-render if needed
-                    if (rootEl && rootEl.parentNode === root) {
-                        const newCount = apps.list().length;
-                        if (newCount !== initialCount) {
-                            // App list changed (config filtered apps) - re-render
-                            renderDesktop(root, nav, apps);
-                        }
-                    }
-                }).catch(() => {
-                    // Config load failed - keep current render (backward compatible)
-                });
+                try {
+                    // Wait for config to load (or reload if already loaded)
+                    await apps.refreshConfig();
+                } catch (err) {
+                    // Config load failed - log warning but continue (backward compatible)
+                    console.warn('DesktopScreen: Failed to load config, showing all apps', err);
+                }
             }
+
+            // Now render with filtered app list (config should be loaded)
+            renderDesktop(root, nav, apps);
         },
 
         unmount: function() {
