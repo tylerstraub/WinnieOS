@@ -5,6 +5,9 @@
  * Essential for kiosk mode operation
  */
 
+let initialized = false;
+let dragStartHandler = null;
+
 // Disable context menu (right-click)
 function disableContextMenu(e) {
     e.preventDefault();
@@ -52,8 +55,16 @@ function preventDragScroll(e) {
     }
 }
 
+function preventDragStart(e) {
+    e.preventDefault();
+    return false;
+}
+
 export const Kiosk = {
     init: function() {
+        if (initialized) return;
+        initialized = true;
+
         // Context menu prevention
         document.addEventListener('contextmenu', disableContextMenu);
         
@@ -64,10 +75,26 @@ export const Kiosk = {
         document.addEventListener('mousedown', preventDragScroll);
         
         // Prevent default browser drag behaviors
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
+        dragStartHandler = preventDragStart;
+        document.addEventListener('dragstart', dragStartHandler);
+    },
+
+    /**
+     * For development/testing only.
+     * In production kiosk mode we generally never “un-init”, but Vitest/HMR may want cleanup.
+     */
+    _resetForTests: function() {
+        // Remove listeners if they were added.
+        if (initialized) {
+            document.removeEventListener('contextmenu', disableContextMenu);
+            document.removeEventListener('keydown', blockNavigation);
+            document.removeEventListener('mousedown', preventDragScroll);
+            if (dragStartHandler) {
+                document.removeEventListener('dragstart', dragStartHandler);
+            }
+        }
+        initialized = false;
+        dragStartHandler = null;
     }
 };
 

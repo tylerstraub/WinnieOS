@@ -4,6 +4,9 @@ import { Kiosk } from '../kiosk.js';
 describe('Kiosk', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    if (Kiosk && typeof Kiosk._resetForTests === 'function') {
+      Kiosk._resetForTests();
+    }
   });
 
   it('should initialize without errors', () => {
@@ -13,6 +16,13 @@ describe('Kiosk', () => {
   it('should attach to window.WinnieOS namespace', () => {
     expect(window.WinnieOS).toBeDefined();
     expect(window.WinnieOS.Kiosk).toBe(Kiosk);
+  });
+
+  it('should be idempotent (init can be called multiple times safely)', () => {
+    expect(() => {
+      Kiosk.init();
+      Kiosk.init();
+    }).not.toThrow();
   });
 
   it('should prevent context menu', () => {

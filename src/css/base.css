@@ -86,7 +86,7 @@ body {
    Reference Resolution: 1280x800 (16:10)
    
    CRITICAL PRINCIPLES:
-   1. Canvas is ALWAYS 1280x800px (reference size)
+   1. Canvas is ALWAYS the active reference size in px (default 1280x800)
    2. All content inside uses px units (designed for reference)
    3. JavaScript applies transform scale to fit viewport
    4. At reference resolution: scale = 1.0, fills perfectly
@@ -105,7 +105,7 @@ body {
    - Let JavaScript handle scaling automatically
    ============================================ */
 #winnieos-canvas {
-    /* Reference size - NEVER CHANGE THESE VALUES */
+    /* Reference size (active reference resolution) - do not tie this to the real device viewport */
     width: var(--ref-width);  /* 1280px */
     height: var(--ref-height); /* 800px */
     

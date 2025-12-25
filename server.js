@@ -17,7 +17,8 @@ if (fs.existsSync(localConfigPath)) {
 
 const config = {
   server: { ...defaultConfig.server, ...(localConfig.server || {}) },
-  logging: { ...defaultConfig.logging, ...(localConfig.logging || {}) }
+  logging: { ...defaultConfig.logging, ...(localConfig.logging || {}) },
+  display: { ...defaultConfig.display, ...(localConfig.display || {}) }
 };
 
 // Ensure logs directory exists
@@ -64,6 +65,15 @@ if (!fs.existsSync(distPath)) {
   logger.error('Please run: npm run build');
   process.exit(1);
 }
+
+// Public runtime config for the frontend (safe subset only)
+app.get('/winnieos-config.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).send(JSON.stringify({
+    display: config.display
+  }));
+});
 
 app.use(express.static(distPath));
 

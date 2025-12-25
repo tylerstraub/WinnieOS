@@ -3,6 +3,12 @@
     "port": 3000,
     "host": "localhost"
   },
+  "display": {
+    "reference": {
+      "width": 1280,
+      "height": 800
+    }
+  },
   "logging": {
     "level": "info",
     "filename": "logs/winnieos.log"

@@ -16,6 +16,8 @@ import { Display } from './display.js';
 
 let canvas = null;
 let rafId = null;
+let initialized = false;
+let visualViewportTarget = null;
 
 function getCanvas() {
     if (!canvas) {
@@ -33,10 +35,11 @@ function getReferenceSize() {
     }
 
     const cs = window.getComputedStyle(document.documentElement);
-    const w = parseInt(cs.getPropertyValue('--ref-width'), 10);
-    const h = parseInt(cs.getPropertyValue('--ref-height'), 10);
+    // Computed values are typically like "1280px". parseFloat handles both "1280" and "1280px".
+    const w = parseFloat(cs.getPropertyValue('--ref-width'));
+    const h = parseFloat(cs.getPropertyValue('--ref-height'));
     if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
-        return { width: w, height: h };
+        return { width: Math.round(w), height: Math.round(h) };
     }
 
     return { width: 1280, height: 800 };
@@ -80,8 +83,9 @@ function applyScale() {
     const scaledWidth = REF_WIDTH * scale;
     const scaledHeight = REF_HEIGHT * scale;
 
-    const left = vp.offsetLeft + (vw - scaledWidth) / 2;
-    const top = vp.offsetTop + (vh - scaledHeight) / 2;
+    // Snap position to whole pixels to reduce subpixel blur/jitter.
+    const left = Math.round(vp.offsetLeft + (vw - scaledWidth) / 2);
+    const top = Math.round(vp.offsetTop + (vh - scaledHeight) / 2);
 
     // Keep the internal coordinate system stable: always REF_WIDTH x REF_HEIGHT (the active reference size).
     canvasElement.style.position = 'fixed';
@@ -92,11 +96,17 @@ function applyScale() {
     canvasElement.style.margin = '0';
     canvasElement.style.padding = '0';
     canvasElement.style.transformOrigin = 'top left';
-    canvasElement.style.transform = `scale(${scale})`;
+    // Avoid giant float strings in DOM attributes/styles.
+    const scaleStr = String(roundScale(scale));
+    canvasElement.style.transform = `scale(${scaleStr})`;
 
     // Expose scale for debugging / future utilities.
-    canvasElement.dataset.scale = String(scale);
-    document.documentElement.style.setProperty('--viewport-scale', String(scale));
+    canvasElement.dataset.scale = scaleStr;
+    canvasElement.dataset.vw = String(Math.round(vw));
+    canvasElement.dataset.vh = String(Math.round(vh));
+    canvasElement.dataset.left = String(left);
+    canvasElement.dataset.top = String(top);
+    document.documentElement.style.setProperty('--viewport-scale', scaleStr);
 }
 
 function scheduleUpdate() {
@@ -107,9 +117,15 @@ function scheduleUpdate() {
     });
 }
 
+function roundScale(n) {
+    return Math.round(n * 100000) / 100000;
+}
+
 export const Viewport = {
     init: function() {
+        if (initialized) return;
         if (!getCanvas()) return;
+        initialized = true;
 
         scheduleUpdate();
         window.addEventListener('resize', scheduleUpdate);
@@ -117,8 +133,9 @@ export const Viewport = {
 
         // VisualViewport can change via pinch-zoom / virtual keyboard on some devices.
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', scheduleUpdate);
-            window.visualViewport.addEventListener('scroll', scheduleUpdate);
+            visualViewportTarget = window.visualViewport;
+            visualViewportTarget.addEventListener('resize', scheduleUpdate);
+            visualViewportTarget.addEventListener('scroll', scheduleUpdate);
         }
     },
     
@@ -131,8 +148,49 @@ export const Viewport = {
         return getReferenceSize();
     },
 
+    getMetrics: function() {
+        const ref = getReferenceSize();
+        const vp = getViewportSize();
+        const el = getCanvas();
+        const scale = el
+            ? parseFloat(el.dataset.scale || '1')
+            : roundScale(Math.min(vp.width / ref.width, vp.height / ref.height));
+        return {
+            reference: { width: ref.width, height: ref.height },
+            viewport: { width: vp.width, height: vp.height, offsetLeft: vp.offsetLeft || 0, offsetTop: vp.offsetTop || 0 },
+            scale
+        };
+    },
+
     refresh: function() {
         scheduleUpdate();
+    },
+
+    /**
+     * For development/testing only.
+     * Helps Vitest reset module-level state without relying on module reload semantics.
+     */
+    _resetForTests: function() {
+        // Remove listeners if they were added.
+        if (initialized) {
+            window.removeEventListener('resize', scheduleUpdate);
+            document.removeEventListener('winnieos:displaychange', scheduleUpdate);
+
+            if (visualViewportTarget) {
+                visualViewportTarget.removeEventListener('resize', scheduleUpdate);
+                visualViewportTarget.removeEventListener('scroll', scheduleUpdate);
+            }
+        }
+
+        // Cancel pending animation frame work (if any).
+        if (rafId && typeof window.cancelAnimationFrame === 'function') {
+            try { window.cancelAnimationFrame(rafId); } catch (_) { /* ignore */ }
+        }
+
+        initialized = false;
+        rafId = null;
+        canvas = null;
+        visualViewportTarget = null;
     }
 };
 

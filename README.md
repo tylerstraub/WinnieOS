@@ -100,6 +100,9 @@ WinnieOS/
 **Debugging**
 - Current scale is exposed as `#winnieos-canvas[data-scale]`
 - The same value is also available as CSS variable `--viewport-scale` on `:root`
+ - Additional viewport metrics are exposed as dataset attributes on `#winnieos-canvas`:
+   - `data-vw`, `data-vh`, `data-left`, `data-top`
+ - Programmatic access is available via `WinnieOS.Viewport.getMetrics()`
 
 **Display Module (Reference Resolution Owner)**
 - `WinnieOS.Display` owns the reference resolution and persists it in `localStorage`
@@ -110,6 +113,24 @@ WinnieOS/
   - `WinnieOS.Display.setReferenceSize({ width, height })`
   - For temporary/dev testing without saving: `WinnieOS.Display.setReferenceSize({ width, height, persist: false })`
   - To return to defaults: `WinnieOS.Display.resetReferenceSize()`
+
+## Baseline Invariants (Keep Us Scalable)
+
+These are the “guardrails” that keep WinnieOS easy to reason about as it grows from a welcome screen into a full pretend OS.
+
+- **Single coordinate system**: All UI is designed in exactly one reference resolution at a time (default 1280×800).
+- **Canvas size never follows the device**: `#winnieos-canvas` always uses the active reference width/height in px.
+- **One scaling rule**: The only “responsiveness” is the uniform transform scale from `WinnieOS.Viewport` (letterbox/pillarbox as needed).
+- **No `vw/vh` inside the canvas**: Inside `#winnieos-canvas`, use px + tokens (`var(--spacing-lg)`, etc.).
+- **Reference resolution changes are centralized**: Only `WinnieOS.Display` owns/persists the reference size and broadcasts `winnieos:displaychange`.
+- **Core systems are idempotent**: Calling `init()` multiple times should be safe (important during Vite HMR and for tests).
+
+### Quick sanity checks (when you add new UI)
+
+- Resize the browser window in dev: the canvas should stay centered and scaled, with no layout “reflow” logic.
+- Temporarily test another reference resolution:
+  - `WinnieOS.Display.setReferenceSize({ width: 1024, height: 768, persist: false })`
+  - Confirm `#winnieos-canvas[data-scale]` updates and everything still fits.
 
 **Design Tokens (CSS Custom Properties)**
 - Typography scale: `--font-size-xs` through `--font-size-6xl`
@@ -519,6 +540,12 @@ Edit `config/local.json`:
     "port": 3000,
     "host": "localhost"
   },
+  "display": {
+    "reference": {
+      "width": 1280,
+      "height": 800
+    }
+  },
   "logging": {
     "level": "info"
   },
@@ -530,6 +557,7 @@ Edit `config/local.json`:
 
 - **port**: Server port (default: 3000)
 - **host**: Server hostname (default: localhost)
+- **display.reference.width/height**: Default “virtual computer” reference resolution (used only if the user has not persisted a reference size in localStorage)
 - **logging.level**: Log level (info, warn, error, debug)
 - **chromium.path**: Path to Chromium/Chrome executable
 

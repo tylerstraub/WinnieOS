@@ -68,7 +68,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 
 **Critical**: 1280x800 (16:10 aspect ratio) is the absolute reference point.
 
-- Canvas (`#winnieos-canvas`) is ALWAYS 1280x800px (never changes)
+- Canvas (`#winnieos-canvas`) is ALWAYS the **active reference resolution** in px (default: 1280x800). It never follows the real device viewport.
 - All UI elements use px units (designed for 1280x800)
 - At exact reference resolution (1280x800): canvas fills viewport directly using `position: fixed` with `100%` width/height
 - On other resolutions: canvas scales proportionally using CSS `transform: scale()` maintaining aspect ratio

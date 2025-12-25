@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "vite",
+    "stop:dev": "powershell -ExecutionPolicy Bypass -File scripts/stop-dev.ps1",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
