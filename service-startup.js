@@ -83,6 +83,46 @@ if (gitExecutable !== 'git') {
 }
 
 /**
+ * Configure git safe.directory for SYSTEM account
+ * Git 2.35.2+ requires explicit permission to access repos owned by different users
+ */
+function configureGitSafeDirectory() {
+  try {
+    // Normalize path to forward slashes (git prefers this on Windows)
+    const safePath = projectRoot.replace(/\\/g, '/');
+    
+    // Check if safe.directory is already configured
+    try {
+      const existing = execSync(`"${gitExecutable}" config --global --get-all safe.directory`, {
+        cwd: projectRoot,
+        encoding: 'utf8',
+        stdio: 'pipe'
+      });
+      
+      const directories = existing.trim().split('\n').filter(line => line.trim());
+      if (directories.includes(safePath)) {
+        logger.info(`Git safe.directory already configured: ${safePath}`);
+        return true;
+      }
+    } catch {
+      // No safe.directory configured yet, continue to add it
+    }
+    
+    // Add safe.directory
+    logger.info(`Configuring git safe.directory: ${safePath}`);
+    execSync(`"${gitExecutable}" config --global --add safe.directory "${safePath}"`, {
+      cwd: projectRoot,
+      stdio: 'pipe'
+    });
+    logger.info('Git safe.directory configured successfully');
+    return true;
+  } catch (error) {
+    logger.warn(`Failed to configure git safe.directory: ${error.message}. Git operations may fail.`);
+    return false;
+  }
+}
+
+/**
  * Execute git pull (fail gracefully)
  */
 function performGitPull() {
@@ -91,6 +131,9 @@ function performGitPull() {
     logger.info('Git pull disabled in config. Skipping.');
     return;
   }
+  
+  // Configure git safe.directory first (required for SYSTEM account)
+  configureGitSafeDirectory();
   
   logger.info('Performing git pull...');
   logger.info(`DEBUG: projectRoot = ${projectRoot}`);
@@ -191,6 +234,9 @@ function performNpmInstall() {
  * Get current git commit hash
  */
 function getCurrentCommitHash() {
+  // Ensure safe.directory is configured (safeguard in case this is called before performGitPull)
+  configureGitSafeDirectory();
+  
   try {
     return execSync(`"${gitExecutable}" rev-parse HEAD`, { 
       cwd: projectRoot, 
