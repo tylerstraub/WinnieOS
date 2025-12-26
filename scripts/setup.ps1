@@ -140,7 +140,7 @@ if (-not $SkipServiceInstall) {
 Write-Host "=== Setup Complete ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  1. Edit config\local.json to set Chromium path if needed (script will auto-detect common paths)" -ForegroundColor Gray
+Write-Host "  1. Edit config\local.json to customize settings (kiosk user, startup options, etc.)" -ForegroundColor Gray
 Write-Host "  2. Test the server: npm start" -ForegroundColor Gray
-Write-Host "  3. Set up Task Scheduler to run scripts\start.ps1 on startup" -ForegroundColor Gray
+Write-Host "  3. The Windows Service will automatically start on system boot and handle updates" -ForegroundColor Gray
 Write-Host ""

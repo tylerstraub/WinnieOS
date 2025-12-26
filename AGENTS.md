@@ -16,12 +16,13 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - **Process Management**: Windows Service (node-windows) for persistent background operation
 - **Configuration**: JSON-based config system with defaults + local overrides
 - **Logging**: Winston file-based logging to `logs/winnieos.log`
-- **Browser**: Chromium/Chrome launched in kiosk mode via PowerShell
+- **Browser**: Edge Kiosk mode (configured separately, launches automatically when kiosk user logs in)
 - **Frontend**: Modular CSS and JavaScript (ES modules) architecture, startup → desktop → apps, scalable toward a full OS
 
 ## Critical File Locations
 
 ### Server & Infrastructure
+- `service-startup.js` - Service entry point (git pull, npm install, build detection, starts server)
 - `server.js` - Express web server (production, serves `dist/`)
 - `vite.config.js` - Vite configuration (dev server, build settings)
 - `vitest.config.js` - Vitest test configuration
@@ -30,6 +31,7 @@ WinnieOS is a kid-friendly computing environment: a local web application that r
 - `config/local.json` - Local overrides (gitignored, not synced, optional)
 - `scripts/` - PowerShell and Node.js scripts for setup/management
 - `logs/winnieos.log` - Application logs (gitignored)
+- `logs/last-build-hash.txt` - Last built git commit hash (for build detection)
 
 ### Frontend Architecture
 
@@ -140,12 +142,12 @@ window.WinnieOS = {
 
 ### Production Workflow (Target Laptop)
 
-- Windows Service runs persistently in background
-- `scripts/start.ps1` runs on system startup (via Task Scheduler)
-- Startup sequence: git pull (force) → npm install → rebuild `dist/` → restart service → launch browser
-- Service serves pre-built `dist/` directory (committed to repo, but script rebuilds on every startup by default)
-- Service is restarted on each startup to pick up code changes (script auto-elevates with UAC if needed)
-- Remote restart: `scripts/restart.ps1` (stops browser/service, then runs start.ps1, auto-elevates if needed)
+- Windows Service runs persistently in background (starts automatically on system boot)
+- Service runs `service-startup.js` which handles: git pull → npm install → build detection → conditional build → start server
+- Service serves pre-built `dist/` directory (committed to repo, service rebuilds if code changes detected)
+- Service starts automatically on boot (SYSTEM account, no Task Scheduler needed)
+- Build detection: compares git commit hash, builds if hash changed or dist/ missing
+- Remote restart: `scripts/restart-service.ps1` (simple service restart, service handles updates)
 
 ## Important Design Decisions
 
@@ -178,11 +180,11 @@ window.WinnieOS = {
 ## Key Scripts
 
 - `scripts/setup.ps1` - Initial setup (checks prereqs, installs deps, creates config, optional service install, builds dist/ if needed)
-- `scripts/start.ps1` - Production startup (git pull, npm install, check/build dist/, restart service, launch browser)
-- `scripts/restart.ps1` - Remote restart (stop browser/service, delegate to start.ps1)
 - `scripts/install-service.ps1` - Windows Service installer wrapper (requires admin, builds dist/ if needed, stops service before uninstall)
-- `scripts/install-service.js` - Node.js service installer (uses node-windows)
-- `scripts/setup-task-scheduler.ps1` - Task Scheduler setup (creates/removes startup task)
+- `scripts/install-service.js` - Node.js service installer (uses node-windows, runs service-startup.js)
+- `scripts/restart-service.ps1` - Service restart script (simple restart, service handles updates)
+- `scripts/debug-startup.ps1` - Debug script for service startup issues
+- `service-startup.js` - Service entry point (git pull, npm install, build detection, conditional build, start server)
 
 ## Git Workflow
 
@@ -238,7 +240,7 @@ window.WinnieOS = {
 2. Test locally (`npm run dev`, `npm test`)
 3. Build and test production (`npm run build`, `npm start`)
 4. Commit `package.json`, `package-lock.json`, and `dist/` (always commit dist/ if build changed)
-5. Production will auto-install on next startup via `npm install` in start.ps1
+5. Production will auto-install on next service start via `npm install` in service-startup.js
 6. Production will rebuild `dist/` if missing (but it should be committed)
 
 ### Debugging Production Issues
@@ -246,10 +248,10 @@ window.WinnieOS = {
 1. Check logs: `logs/winnieos.log`
 2. Verify service status: `Get-Service "WinnieOS Server"`
 3. Check git status: ensure remote is configured
-4. Ensure `dist/` exists and is up to date (should be committed, but start.ps1 will build if missing)
+4. Ensure `dist/` exists and is up to date (should be committed, but service will build if missing or code changed)
 5. Test server manually: `npm start` (production server, serves `dist/`) or `npm run dev` (Vite dev server)
 6. Rebuild if needed: `npm run build` to regenerate `dist/`
-7. Service restart: The service is automatically restarted by start.ps1 to pick up code changes
+7. Service startup: The service automatically handles git pull, build detection, and server startup on boot
 
 ### Testing Scripts
 

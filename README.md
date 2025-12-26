@@ -75,9 +75,7 @@ WinnieOS/
 │   ├── install-service.js # Node.js script for Windows Service install/uninstall
 │   ├── install-service.ps1 # PowerShell wrapper for service installation
 │   ├── setup.ps1          # Initial setup script
-│   ├── start.ps1          # Startup script (git pull, check/build dist/, restart service, launch browser)
-│   ├── restart.ps1       # Remote restart script
-│   ├── setup-task-scheduler.ps1 # Task Scheduler setup script
+│   ├── restart-service.ps1 # Service restart script
 │   ├── launch-dev-kiosk.ps1 # Development kiosk launcher
 │   ├── stop-dev.ps1 # Stop development server and browser
 │   └── debug-startup.ps1 # Debug script for startup issues
@@ -252,15 +250,17 @@ window.WinnieOS = {
 
 #### Windows Service
 
-- Service name: "WinnieOS Server" (runs `server.js`, managed via `scripts/install-service.js`)
+- Service name: "WinnieOS Server" (runs `service-startup.js`, managed via `scripts/install-service.js`)
+- Service automatically starts on system boot (SYSTEM account)
+- Service handles: git pull, npm install, conditional build, server startup
+- No Task Scheduler needed - service manages everything
 
 #### PowerShell Scripts
 
 - **`setup.ps1`**: Initial setup (deps, config, optional service install)
-- **`start.ps1`**: Startup (git pull, npm install, rebuild dist/, restart service, launch browser). Auto-elevates if admin needed.
-- **`restart.ps1`**: Remote restart (stops browser/service, runs start.ps1)
 - **`install-service.ps1`**: Service installer wrapper (requires admin)
-- **`setup-task-scheduler.ps1`**: Task Scheduler setup
+- **`restart-service.ps1`**: Service restart script (simple restart, no updates)
+- **`debug-startup.ps1`**: Debug script for service startup issues
 
 ## Development Workflow
 
@@ -391,7 +391,7 @@ This will:
 
 ### Testing on Production Laptop
 
-The production laptop will automatically pull updates on startup via `start.ps1`.
+The production laptop will automatically pull updates on startup via the Windows Service (runs on system boot).
 
 ## Adding New Features
 
@@ -610,62 +610,46 @@ This will:
 - Create local configuration
 - Install Windows Service (if run as Administrator)
 
-**Step 3: Configure Task Scheduler (Automatic Startup)**
+**Step 3: Service is Ready**
 
-Option A - Automated Setup (Recommended):
-```powershell
-# Run PowerShell as Administrator, then:
-cd C:\Users\Winnie\WinnieOS
-.\scripts\setup-task-scheduler.ps1
-```
-
-Option B - Manual Setup:
-   - Open Task Scheduler
-   - Create Basic Task
-   - Name: "WinnieOS Startup"
-   - Trigger: "When the computer starts"
-   - Action: Start a program
-   - Program: `powershell.exe`
-   - Arguments: `-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File "C:\Users\Winnie\WinnieOS\scripts\start.ps1"`
-   - Start in: `C:\Users\Winnie\WinnieOS`
-   - Check "Run with highest privileges"
-   - Finish
+The Windows Service is now installed and configured. It will automatically start on system boot and handle all startup operations.
 
 ### Startup Sequence
 
 On system boot:
 
-1. Task Scheduler runs `scripts\start.ps1`
-2. Script performs git pull (force, overwrites local changes)
-3. Script runs `npm install` to update dependencies
-4. Script checks if `dist/` directory exists (builds it if missing)
-5. Script restarts Windows Service (to pick up code changes)
-6. Script waits for server to be ready (up to 30 seconds)
-7. Script launches Chromium in kiosk mode pointing to `http://localhost:3000`
+1. Windows Service starts automatically (SYSTEM account)
+2. Service runs `service-startup.js` which:
+   - Performs git pull (force, overwrites local changes)
+   - Runs `npm install` if package.json changed
+   - Checks if build is needed (git commit hash changed or dist/ missing)
+   - Builds `dist/` if needed
+   - Starts Express server
+3. Server is available at `http://localhost:3000`
+4. Edge Kiosk mode (configured separately) launches browser automatically when kiosk user logs in
 
 ### Remote Restart
 
-To remotely restart WinnieOS (via SSH):
+To remotely restart the service (via SSH):
 
 ```powershell
 cd C:\path\to\WinnieOS
-.\scripts\restart.ps1
+.\scripts\restart-service.ps1
 ```
 
 This will:
-1. Stop all Chromium/Chrome/Edge processes
-2. Stop the Windows Service
-3. Run `start.ps1` to pull updates and restart everything
+1. Stop the Windows Service
+2. Start the Windows Service (which will perform git pull, build if needed, and start server)
 
 ### Updating the Application
 
 1. Make changes in your development environment
 2. Commit and push to GitHub
 3. On target laptop, either:
-   - Reboot the laptop (automatic update on startup)
-   - SSH in and run `.\scripts\restart.ps1`
+   - Reboot the laptop (automatic update on startup via service)
+   - SSH in and run `.\scripts\restart-service.ps1` (restarts service, which pulls updates)
 
-Updates are pulled from the `origin/main` branch (or current branch if different).
+Updates are pulled from the `origin/<current-branch>` branch. The service automatically detects code changes via git commit hash and rebuilds if needed.
 
 ## Configuration
 
@@ -708,7 +692,7 @@ Edit `config/local.json`:
 - **chromium.path**: Path to Chromium/Chrome executable
 - **apps.enabled**: Array of app IDs to enable on desktop
 
-If `chromium.path` is not specified, `start.ps1` will attempt to auto-detect common installation paths.
+The `chromium.path` configuration is no longer used by the service (browser launch is handled by Edge Kiosk mode). It may still be referenced in development scripts.
 
 **Apps filtering behavior:**
 - If `apps.enabled` is specified in config: only those apps are shown
@@ -755,49 +739,23 @@ Initial setup script. Checks prerequisites, installs dependencies, creates local
 .\scripts\setup.ps1 -SkipServiceInstall  # Skip service installation
 ```
 
-#### `scripts/start.ps1`
+#### `scripts/restart-service.ps1`
 
-Startup script for production. Pulls git updates, rebuilds `dist/`, restarts service, launches browser.
-
-**What it does:**
-- Performs git pull (force, overwrites local changes)
-- Runs `npm install` to update dependencies
-- Rebuilds `dist/` (unless `-SkipBuild` is passed)
-- Restarts Windows Service to pick up code changes (auto-elevates with UAC if needed)
-- Waits for server to be ready
-- Verifies runtime config endpoint is available
-- Launches browser in kiosk mode
-
-**Important:** The script will automatically prompt for UAC elevation if admin privileges are needed to restart the Windows Service. This prevents silently running an old server after code updates. Use `-NoElevate` to disable auto-elevation, or `-ContinueWithoutServiceRestart` to skip service restart entirely (not recommended).
+Simple service restart script. Stops and starts the Windows Service. The service will automatically perform git pull, build (if needed), and start the server.
 
 **Usage:**
 ```powershell
-.\scripts\start.ps1
-.\scripts\start.ps1 -ChromiumPath "C:\Path\To\Chrome.exe"
-.\scripts\start.ps1 -Url "http://localhost:3000"
-.\scripts\start.ps1 -SkipBuild  # Skip rebuilding dist/ (use existing)
-.\scripts\start.ps1 -NoElevate  # Don't auto-elevate (will fail if admin needed)
+.\scripts\restart-service.ps1
+.\scripts\restart-service.ps1 -NoElevate  # Don't auto-elevate (will fail if admin needed)
 ```
 
-#### `scripts/restart.ps1`
+#### `scripts/debug-startup.ps1`
 
-Remote restart script. Stops browser and service, then runs start.ps1. Auto-elevates with UAC if admin privileges are needed.
-
-**Usage:**
-```powershell
-.\scripts\restart.ps1
-.\scripts\restart.ps1 -ChromiumPath "C:\Path\To\Chrome.exe"
-.\scripts\restart.ps1 -SkipBuild  # Pass through to start.ps1
-```
-
-#### `scripts/setup-task-scheduler.ps1`
-
-Creates a Windows Task Scheduler task to run WinnieOS on system startup. Requires Administrator privileges.
+Debug script for diagnosing service startup issues. Checks service status, logs, build status, and configuration.
 
 **Usage:**
 ```powershell
-.\scripts\setup-task-scheduler.ps1           # Create the task
-.\scripts\setup-task-scheduler.ps1 -Remove   # Remove the task
+.\scripts\debug-startup.ps1
 ```
 
 #### `scripts/install-service.ps1`
@@ -874,9 +832,11 @@ Log rotation: Winston automatically rotates logs when they reach 5MB, keeping 5 
 - Verify remote is configured: `git remote get-url origin`
 - Check current branch: `git branch`
 - Manual pull: `git fetch --all && git reset --hard origin/<branch>` (replace `<branch>` with your branch name)
-- Service restart: The service is automatically restarted by `start.ps1` to pick up changes (script auto-elevates with UAC if needed)
-- Check that `dist/` is up to date: `start.ps1` rebuilds `dist/` on every startup by default
-- If service restart fails silently: Check that you allowed the UAC prompt, or run `start.ps1` from an elevated PowerShell session
+- Service status: Check with `Get-Service -Name "WinnieOS Server"`
+- Service logs: Check `logs\winnieos.log` for startup sequence details
+- Build detection: Service checks git commit hash - if changed or dist/ missing, it builds automatically
+- If service won't start: Check logs for errors, verify git/node are in PATH for SYSTEM account
+- Manual restart: Use `.\scripts\restart-service.ps1` to restart the service
 
 ## Target Device Specifications
 

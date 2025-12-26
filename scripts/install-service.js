@@ -4,7 +4,7 @@ const Service = require('node-windows').Service;
 const action = process.argv[2]; // 'install' or 'uninstall'
 const serviceName = 'WinnieOS Server';
 const serviceDescription = 'WinnieOS local web server';
-const scriptPath = path.join(__dirname, '..', 'server.js');
+const scriptPath = path.join(__dirname, '..', 'service-startup.js');
 
 // Create service object
 const svc = new Service({
