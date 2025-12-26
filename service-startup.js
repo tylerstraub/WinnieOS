@@ -43,6 +43,46 @@ logger.info('=== WinnieOS Service Startup ===');
 const projectRoot = __dirname;
 
 /**
+ * Find git.exe programmatically
+ * Tries common installation paths and falls back to PATH lookup
+ */
+function findGitExecutable() {
+  const commonPaths = [
+    'C:\\Program Files\\Git\\cmd\\git.exe',
+    'C:\\Program Files (x86)\\Git\\cmd\\git.exe',
+    'C:\\Program Files\\Git\\bin\\git.exe',
+    'C:\\Program Files (x86)\\Git\\bin\\git.exe'
+  ];
+
+  // Try common paths first
+  for (const gitPath of commonPaths) {
+    if (fs.existsSync(gitPath)) {
+      return gitPath;
+    }
+  }
+
+  // Try to find git in PATH using where.exe (Windows)
+  try {
+    const whereResult = execSync('where.exe git', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    const lines = whereResult.split('\n').map(line => line.trim()).filter(line => line);
+    if (lines.length > 0 && fs.existsSync(lines[0])) {
+      return lines[0];
+    }
+  } catch {
+    // where.exe failed, continue to fallback
+  }
+
+  // Fallback to just 'git' (rely on PATH - may not work as SYSTEM)
+  return 'git';
+}
+
+// Cache git executable path
+const gitExecutable = findGitExecutable();
+if (gitExecutable !== 'git') {
+  logger.info(`Using git executable: ${gitExecutable}`);
+}
+
+/**
  * Execute git pull (fail gracefully)
  */
 function performGitPull() {
@@ -56,7 +96,7 @@ function performGitPull() {
   try {
     // Check if we're in a git repository
     try {
-      execSync('git rev-parse --git-dir', { cwd: projectRoot, stdio: 'ignore' });
+      execSync(`"${gitExecutable}" rev-parse --git-dir`, { cwd: projectRoot, stdio: 'ignore' });
     } catch {
       logger.warn('Not a git repository. Skipping git pull.');
       return;
@@ -64,7 +104,7 @@ function performGitPull() {
 
     // Check if remote is configured
     try {
-      execSync('git remote get-url origin', { cwd: projectRoot, stdio: 'ignore' });
+      execSync(`"${gitExecutable}" remote get-url origin`, { cwd: projectRoot, stdio: 'ignore' });
     } catch {
       logger.warn('Git remote "origin" not configured. Skipping git pull.');
       return;
@@ -73,7 +113,7 @@ function performGitPull() {
     // Get current branch
     let branch;
     try {
-      branch = execSync('git rev-parse --abbrev-ref HEAD', { 
+      branch = execSync(`"${gitExecutable}" rev-parse --abbrev-ref HEAD`, { 
         cwd: projectRoot, 
         encoding: 'utf8' 
       }).trim();
@@ -83,8 +123,8 @@ function performGitPull() {
     }
 
     // Perform git pull
-    execSync('git fetch --all', { cwd: projectRoot, stdio: 'inherit' });
-    execSync(`git reset --hard origin/${branch}`, { cwd: projectRoot, stdio: 'inherit' });
+    execSync(`"${gitExecutable}" fetch --all`, { cwd: projectRoot, stdio: 'inherit' });
+    execSync(`"${gitExecutable}" reset --hard origin/${branch}`, { cwd: projectRoot, stdio: 'inherit' });
     logger.info(`Repository updated (branch: ${branch})`);
   } catch (error) {
     logger.warn(`Git pull failed: ${error.message}. Continuing with existing code.`);
@@ -139,7 +179,7 @@ function performNpmInstall() {
  */
 function getCurrentCommitHash() {
   try {
-    return execSync('git rev-parse HEAD', { 
+    return execSync(`"${gitExecutable}" rev-parse HEAD`, { 
       cwd: projectRoot, 
       encoding: 'utf8' 
     }).trim();
