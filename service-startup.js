@@ -136,24 +136,15 @@ function performGitPull() {
   configureGitSafeDirectory();
   
   logger.info('Performing git pull...');
-  logger.info(`DEBUG: projectRoot = ${projectRoot}`);
-  logger.info(`DEBUG: process.cwd() = ${process.cwd()}`);
-  logger.info(`DEBUG: .git exists = ${fs.existsSync(path.join(projectRoot, '.git'))}`);
   
   try {
     // Check if we're in a git repository
     try {
-      const gitDirResult = execSync(`"${gitExecutable}" rev-parse --git-dir`, { 
+      execSync(`"${gitExecutable}" rev-parse --git-dir`, { 
         cwd: projectRoot, 
-        encoding: 'utf8',
-        stdio: 'pipe'
+        stdio: 'ignore' 
       });
-      logger.info(`DEBUG: git rev-parse --git-dir succeeded: ${gitDirResult.trim()}`);
-    } catch (error) {
-      logger.warn(`DEBUG: git rev-parse --git-dir failed:`);
-      logger.warn(`DEBUG:   Error message: ${error.message}`);
-      logger.warn(`DEBUG:   stderr: ${error.stderr?.toString() || 'none'}`);
-      logger.warn(`DEBUG:   stdout: ${error.stdout?.toString() || 'none'}`);
+    } catch {
       logger.warn('Not a git repository. Skipping git pull.');
       return;
     }
