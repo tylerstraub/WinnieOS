@@ -17,7 +17,8 @@
     "enabled": [
       "notepad",
       "letters",
-      "colors"
+      "colors",
+      "slalom"
     ]
   },
   "kiosk": {

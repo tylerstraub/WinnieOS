@@ -355,5 +355,6 @@ Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Currently enabled by
 - `notepad` - Rich text editor with color picker and emoji palette (toddler-first, auto-saves locally, typing sounds)
 - `letters` - 2D physics pachinko-style letter matching game (uses Matter.js, full audio integration)
 - `colors` - Radial color picker for changing background color (uses Background utility, continuous tonal drag sound)
+- `slalom` - "Jet" — toddler-friendly space jet slalom game (Canvas 2D, dual-loop engine, day/night progression, touch + keyboard + mouse input). Ported from JSlalom2024 Winnie Edition. Game module at `src/js/games/slalom/game.js`.
 
 Additional apps exist as stubs (placeholders for future development): `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story`. These can be enabled by adding their IDs to `config/default.json` → `apps.enabled`.
