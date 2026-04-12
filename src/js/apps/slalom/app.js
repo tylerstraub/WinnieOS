@@ -27,20 +27,14 @@ export default {
         canvas.setAttribute('role', 'application');
         root.appendChild(canvas);
 
-        // Size canvas to fill the app root at 16:10 (320x200 virtual)
+        // Size canvas to fill the app root completely.
+        // WinnieOS reference is 1280x800 (16:10) — same aspect as the game's
+        // 320x200 virtual space, so no letterboxing is needed. The game's
+        // DrawEnv scales all rendering from 320x200 to whatever canvas size.
         function sizeCanvas() {
             const rect = root.getBoundingClientRect();
-            const aspect = 320 / 200;
-            let cw, ch;
-            if (rect.width / rect.height > aspect) {
-                ch = rect.height;
-                cw = Math.floor(ch * aspect);
-            } else {
-                cw = rect.width;
-                ch = Math.floor(cw / aspect);
-            }
-            canvas.width = cw;
-            canvas.height = ch;
+            canvas.width = Math.round(rect.width);
+            canvas.height = Math.round(rect.height);
         }
         sizeCanvas();
 
