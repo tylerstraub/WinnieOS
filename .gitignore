@@ -19,3 +19,6 @@ Thumbs.db
 
 # Windows
 desktop.ini
+
+# Claude Code local settings (contains secrets)
+.claude/settings.local.json
