@@ -1,0 +1,56 @@
+/* ============================================
+   SPACE (floor-zero)
+   Thin iframe host for the WinnieRPG "winnie" client.
+   Dark background matches floor-zero theme-color to
+   avoid a white flash while the remote bundle boots.
+   ============================================ */
+
+.wos-floorzero-app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #05050a;
+}
+
+.wos-floorzero-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: #05050a;
+}
+
+.wos-floorzero-offline {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md, 16px);
+    padding: var(--spacing-2xl, 48px);
+    text-align: center;
+    color: #fff;
+    background: #05050a;
+}
+
+.wos-floorzero-offline-icon {
+    font-size: 160px;
+    line-height: 1;
+    opacity: 0.9;
+    filter: drop-shadow(0 8px 24px rgba(120, 160, 255, 0.3));
+}
+
+.wos-floorzero-offline-title {
+    font-size: var(--font-size-4xl, 64px);
+    font-weight: 700;
+    margin-top: var(--spacing-lg, 24px);
+}
+
+.wos-floorzero-offline-text {
+    font-size: var(--font-size-xl, 32px);
+    opacity: 0.75;
+}
