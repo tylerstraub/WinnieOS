@@ -6,31 +6,57 @@
  * this already-loaded page polls /healthz and self-reloads when it sees a
  * new version — Chromium keeps its window, and the kiosk transitions
  * seamlessly to the new build.
+ *
+ * Two invariants that prevent a reload-storm:
+ *   1. knownVersion is captured (awaited) BEFORE any tick can fire, so the
+ *      first comparison always has a real value on both sides.
+ *   2. Ticks self-schedule via setTimeout after each completes — never
+ *      setInterval — so a slow server can't stack overlapping requests.
+ * If the initial capture fails, we abandon the poll entirely rather than
+ * risk a spurious reload.
  */
 
 const POLL_INTERVAL_MS = 5000;
 
 async function fetchVersion() {
-    try {
-        const res = await fetch('/healthz', { cache: 'no-store' });
-        if (!res.ok) return null;
-        const data = await res.json();
-        return typeof data.version === 'string' ? data.version : null;
-    } catch (_) {
-        return null;
+    const res = await fetch('/healthz', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`healthz ${res.status}`);
+    const data = await res.json();
+    if (typeof data.version !== 'string' || !data.version) {
+        throw new Error('healthz missing version');
     }
+    return data.version;
 }
 
-async function start() {
-    const initialVersion = await fetchVersion();
-    if (!initialVersion) return; // server not reachable or /healthz unavailable — give up quietly
+async function startHealthPoll() {
+    let knownVersion;
+    try {
+        knownVersion = await fetchVersion();
+    } catch (_) {
+        // /healthz unreachable at startup — abandon the poll rather than reload-loop.
+        return;
+    }
 
-    setInterval(async () => {
-        const current = await fetchVersion();
-        if (current && current !== initialVersion) {
-            window.location.reload();
+    const tick = async () => {
+        try {
+            const version = await fetchVersion();
+            if (version !== knownVersion) {
+                window.location.reload();
+                return;
+            }
+        } catch (_) {
+            // Transient failure; try again next tick.
         }
-    }, POLL_INTERVAL_MS);
+        setTimeout(tick, POLL_INTERVAL_MS);
+    };
+
+    setTimeout(tick, POLL_INTERVAL_MS);
 }
 
-start();
+// Defer until after the app's initial paint so the poll can't race with
+// page parsing or the startup boot animation.
+if (document.readyState === 'complete') {
+    startHealthPoll();
+} else {
+    window.addEventListener('load', startHealthPoll, { once: true });
+}
