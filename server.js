@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 const winston = require('winston');
 const { loadConfig } = require('./lib/config-loader');
 
@@ -56,6 +57,22 @@ if (!fs.existsSync(distPath)) {
   logger.error('Please run: npm run build');
   process.exit(1);
 }
+
+// Build version: git SHA captured once at startup. Used by /healthz so
+// already-loaded clients can detect a new deploy and reload themselves
+// (avoids needing the deploy script to kill Chromium on every update).
+const VERSION = (() => {
+  try {
+    return execSync('git rev-parse HEAD', { cwd: __dirname, encoding: 'utf8' }).trim();
+  } catch (_) {
+    return 'unknown';
+  }
+})();
+
+app.get('/healthz', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(200).json({ version: VERSION });
+});
 
 // Public runtime config for the frontend (safe subset only)
 app.get('/winnieos-config.json', (req, res) => {

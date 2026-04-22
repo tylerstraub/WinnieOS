@@ -6,13 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "vite",
-    "stop:dev": "powershell -ExecutionPolicy Bypass -File scripts/stop-dev.ps1",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "test:ui": "vitest --ui",
-    "install-service": "node scripts/install-service.js install",
-    "uninstall-service": "node scripts/install-service.js uninstall"
+    "test:ui": "vitest --ui"
   },
   "keywords": [
     "kiosk",
@@ -26,7 +23,6 @@
   "dependencies": {
     "express": "^5.2.1",
     "matter-js": "^0.20.0",
-    "node-windows": "^1.0.0-beta.8",
     "winston": "^3.19.0"
   },
   "devDependencies": {

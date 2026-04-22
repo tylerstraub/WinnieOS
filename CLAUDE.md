@@ -4,7 +4,7 @@ This file provides context for Claude Code sessions working on WinnieOS.
 
 ## What is WinnieOS?
 
-A kid-friendly "pretend OS" for a toddler - a local web app designed for an 8" Windows laptop (1280x800) in kiosk mode. Built to introduce basic computing concepts through colorful, touch-friendly apps.
+A kid-friendly "pretend OS" for a toddler - a local web app designed for an 8" Linux laptop (1280x800) in Chromium kiosk mode. Built to introduce basic computing concepts through colorful, touch-friendly apps.
 
 ## Quick Start (macOS/Development)
 

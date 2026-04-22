@@ -1,104 +1,86 @@
 # Agent Context: WinnieOS
 
-This document provides essential context for AI agents working on the WinnieOS project. For detailed information, refer to README.md.
+This document provides essential context for AI agents working on the WinnieOS project. For a high-level overview, see `README.md`. For extending WinnieOS with new apps, see `DAD.md`.
 
 ## Project Overview
 
-WinnieOS is a kid-friendly computing environment: a local web application that runs in Chromium kiosk mode on Windows 11, optimized for an 8" laptop (1280x800, 16:10). It's designed to introduce toddlers to basic computing concepts and will eventually grow into a full "pretend OS" experience.
+WinnieOS is a kid-friendly computing environment: a local web application that runs in Chromium kiosk mode, optimized for an 8" laptop (1280×800, 16:10). It is designed to introduce a toddler to basic computing concepts and will grow into a full "pretend OS" experience.
 
-**Key Principle**: The entire application runs locally and offline after initial setup. Updates are pulled from GitHub on startup via git pull.
+**Key principle:** The entire application runs locally. Updates reach the kiosk device through a systemd-timer-driven git pull on the target (this lives outside the repo).
 
 ## Architecture Summary
 
-- **Web Server**: Express.js serving static files from `dist/` directory (Vite build output)
-- **Build Tool**: Vite (development server with HMR, production builds)
-- **Testing**: Vitest (unit testing framework)
-- **Process Management**: Windows Service (node-windows) for persistent background operation
-- **Configuration**: JSON-based config system with defaults + local overrides
+- **Web server**: Express.js serving static files from `dist/` (Vite build output)
+- **Build tool**: Vite (dev server with HMR, production builds)
+- **Testing**: Vitest
+- **Configuration**: JSON-based (defaults + optional local overrides)
 - **Logging**: Winston file-based logging to `logs/winnieos.log`
-- **Browser**: Edge Kiosk mode (configured separately, launches automatically when kiosk user logs in)
-- **Frontend**: Modular CSS and JavaScript (ES modules) architecture, startup → desktop → apps, scalable toward a full OS
+- **Browser**: Chromium in `--kiosk` mode on the target device
+- **Frontend**: Modular CSS + vanilla ES modules, startup → desktop → apps
 
 ## Critical File Locations
 
 ### Server & Infrastructure
-- `service-startup.js` - Service entry point (git pull, npm install, build detection, starts server)
-- `server.js` - Express web server (production, serves `dist/`)
-- `vite.config.js` - Vite configuration (dev server, build settings)
-- `vitest.config.js` - Vitest test configuration
-- `lib/config-loader.js` - Shared configuration loader (used by server.js and vite.config.js)
-- `config/default.json` - Default configuration (committed, source of truth)
-- `config/local.json` - Local overrides (gitignored, not synced, optional)
-- `scripts/` - PowerShell and Node.js scripts for setup/management
-- `logs/winnieos.log` - Application logs (gitignored)
-- `logs/last-build-hash.txt` - Last built git commit hash (for build detection)
+- `server.js` — Express web server (serves `dist/`, exposes `/healthz`, `/winnieos-config.json`, `/winnieos-debug.json`)
+- `vite.config.js` — Vite configuration (dev server, build settings)
+- `vitest.config.js` — Vitest test configuration
+- `lib/config-loader.js` — Shared configuration loader (used by `server.js` and `vite.config.js`)
+- `config/default.json` — Default configuration (committed, source of truth)
+- `config/local.json` — Local overrides (gitignored, optional)
+- `deploy/winnieos-server.service` — Reference systemd unit for the kiosk device
+- `logs/winnieos.log` — Application logs (gitignored)
 
-### Frontend Architecture
+### Frontend
 
-**Entry Point:**
-- `index.html` - Vite entry point (root), references `src/main.js`
-- `src/main.js` - Application entry point, imports all CSS and JS modules
+**Entry point:**
+- `index.html` — Vite entry point
+- `src/main.js` — imports all CSS and JS modules in dependency order
 
-**CSS (Modular Stylesheets):**
-- `src/css/tokens.css` - Design tokens (CSS custom properties)
-- `src/css/base.css` - Reset, normalize, canvas styling, kiosk protections
-- `src/css/layout.css` - Layout utilities (spacing, typography, display)
-- `src/css/components.css` - Component styles and imports
-- `src/css/components/` - Individual component CSS files (as features are added)
+**CSS (modular):**
+- `src/css/tokens.css` — design tokens (CSS custom properties)
+- `src/css/base.css` — reset, canvas styling, kiosk protections
+- `src/css/layout.css` — layout utilities
+- `src/css/components.css` — component imports
+- `src/css/components/` — individual component stylesheets
 
-**JavaScript (ES Modules):**
-- `src/js/core/display.js` - Reference resolution owner
-- `src/js/core/viewport.js` - Viewport scaling (scales/centers canvas to fit viewport, maintains aspect ratio)
-- `src/js/core/kiosk.js` - Kiosk mode protections
-- `src/js/core/config.js` - Runtime config loader (fetches `/winnieos-config.json`)
-- `src/js/core/index.js` - Core initialization
-- `src/js/nav/navigation.js` - Navigation state machine (startup/desktop/app)
-- `src/js/shell/` - Always-mounted shell (Home button + content host)
-- `src/js/screens/` - Screens (Startup/Desktop/AppHost)
-- `src/js/apps/` - Apps plug-ins (auto-discovered by Vite, filtered by config)
-- `src/js/games/` - Game modules (full-screen interactive experiences)
-- `src/js/components/index.js` - Component registry namespace
-- `src/js/components/` - Individual component modules (as features are added)
-- `src/js/utils/index.js` - Utility functions namespace
-- `src/js/utils/storage.js` - General-purpose localStorage wrapper (`WinnieOS.Utils.Storage`)
-- `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
-- `src/js/utils/audio.js` - Web Audio API sound system (`WinnieOS.Utils.Audio`) - UI feedback, navigation cues, game sounds
-- `src/js/games/` - Game modules (e.g., `letters/game.js`)
+**JavaScript (ES modules):**
+- `src/js/core/display.js` — reference resolution owner
+- `src/js/core/viewport.js` — scales/centers the canvas
+- `src/js/core/kiosk.js` — kiosk protections
+- `src/js/core/config.js` — runtime config loader (fetches `/winnieos-config.json`)
+- `src/js/core/index.js` — core initialization
+- `src/js/nav/navigation.js` — startup/desktop/app state machine
+- `src/js/shell/` — always-mounted Home button + content host
+- `src/js/screens/` — Startup / Desktop / AppHost
+- `src/js/apps/` — app plug-ins (auto-discovered by Vite, filtered by config)
+- `src/js/games/` — game modules (full-screen interactive experiences)
+- `src/js/utils/storage.js` — localStorage wrapper
+- `src/js/utils/background.js` — background color management
+- `src/js/utils/audio.js` — Web Audio API sound system
+- `src/js/utils/health-poll.js` — polls `/healthz`, reloads on new deploys
 
-**Build Output:**
-- `dist/` - Production build output (committed, served by Express)
-- `dist/index.html` - Built HTML with bundled assets
-- `dist/assets/` - Bundled CSS/JS and static assets
-
-**Static Assets:**
-- `public/assets/images/` - Image files (copied to dist/ by Vite)
-- `public/assets/fonts/` - Font files (copied to dist/ by Vite)
+**Build output:**
+- `dist/` — production build (committed, served by Express)
+- `public/assets/` — static assets copied into `dist/` by Vite
 
 ## Frontend Foundation Principles
 
 ### Reference Resolution System
 
-**Critical**: 1280x800 (16:10 aspect ratio) is the absolute reference point.
+**Critical:** 1280×800 (16:10) is the absolute reference point.
 
-- Canvas (`#winnieos-canvas`) is ALWAYS the **active reference resolution** in px (default: 1280x800). It never follows the real device viewport.
-- All UI elements use px units (designed for 1280x800)
-- Canvas is scaled/centered via CSS `transform: scale()` and pixel offsets (maintains aspect ratio, letterbox/pillarbox as needed)
-- At exact reference resolution (1280x800): scale = 1.0 and offsets = 0, so canvas fills viewport perfectly
+- `#winnieos-canvas` is ALWAYS the reference resolution in px (default 1280×800). It never follows the real device viewport.
+- All UI elements use px units.
+- The canvas is scaled/centered via `transform: scale()` and pixel offsets — letterbox/pillarbox as needed.
+- At exact reference resolution: scale = 1.0, offsets = 0.
 
-**DO NOT:**
-- Use viewport units (vw/vh) inside canvas
-- Change canvas size based on viewport
-- Manually calculate scaling in CSS
+**DO NOT** use vw/vh inside the canvas, change canvas size based on the viewport, or hand-roll scaling in CSS.
 
-**DO:**
-- Use px units for all sizing
-- Use CSS custom properties (design tokens)
-- Design everything at 1280x800
-- Let JavaScript handle scaling automatically
+**DO** use px units, CSS custom properties (design tokens), and design everything at 1280×800. JavaScript handles scaling.
 
 ### Design Tokens
 
-All styling values are defined as CSS custom properties in `src/css/tokens.css`:
+All styling values are CSS custom properties in `src/css/tokens.css`:
 - Typography: `--font-size-xs` through `--font-size-6xl`
 - Spacing: `--spacing-xs` through `--spacing-5xl`
 - Colors: `--color-primary`, `--color-secondary`, `--color-text`
@@ -108,253 +90,124 @@ Always use design tokens, never hardcode values.
 
 ### JavaScript Namespace
 
-All JavaScript organized under `WinnieOS` namespace:
+All JavaScript is organized under `window.WinnieOS`:
+
 ```javascript
 window.WinnieOS = {
-    Display: { ... },       // Reference resolution owner
-    Viewport: { ... },      // Viewport scaling
-    Kiosk: { ... },         // Kiosk protections
-    Config: { ... },        // Runtime config loader
-    Navigation: { ... },    // Navigation state (startup/desktop/app)
-    Shell: { ... },         // Always-mounted UI shell
-    Screens: { ... },       // Screen registry
-    Apps: { ... },          // App registry (auto-discovered, filtered by config)
-    Components: { ... },    // Component registry
-    Utils: {                // Utility functions
-        Storage: { ... },    // LocalStorage wrapper for persistence
-        Background: { ... }, // Background color management
-        Audio: { ... }       // Web Audio API sound system (UI feedback, navigation, games)
+    Display: { ... },
+    Viewport: { ... },
+    Kiosk: { ... },
+    Config: { ... },
+    Navigation: { ... },
+    Shell: { ... },
+    Screens: { ... },
+    Apps: { ... },
+    Components: { ... },
+    Utils: {
+        Storage: { ... },
+        Background: { ... },
+        Audio: { ... }
     }
 }
 ```
 
 ## Development vs Production
 
-### Development Workflow (Developer's Machine)
+### Development (developer's machine)
 
-- Run `npm run dev` for Vite development server with HMR (Hot Module Replacement)
-- Run `npm run build` to build production bundle to `dist/`
-- Run `npm start` for production server (serves `dist/`, no hot reload)
-- Run `npm test` to run Vitest test suite
-- No Windows Service needed
+- `npm run dev` — Vite dev server with HMR
+- `npm run build` — production bundle to `dist/`
+- `npm start` — production server (serves `dist/`)
+- `npm test` — Vitest suite
 - Access at `http://localhost:3000`
-- Make changes in `src/`, test, build, commit (including `dist/`), push
+- Edit `src/`, test, build, commit (**including `dist/`**), push
 
-### Production Workflow (Target Laptop)
+### Production (kiosk device)
 
-- Windows Service runs persistently in background (starts automatically on system boot)
-- Service runs `service-startup.js` which handles: git pull → npm install → build detection → conditional build → start server
-- Service serves pre-built `dist/` directory (committed to repo, service rebuilds if code changes detected)
-- Service starts automatically on boot (SYSTEM account, no Task Scheduler needed)
-- Build detection: compares git commit hash, builds if hash changed or dist/ missing
-- Remote restart: `scripts/restart-service.ps1` (simple service restart, service handles updates)
-
-## Important Design Decisions
-
-1. **Force git pull**: Production always overwrites local changes with upstream (except gitignored files)
-2. **Local config persists**: `config/local.json` is gitignored, survives updates
-3. **Browser state persists**: Storage utility (localStorage/IndexedDB) not affected by code updates
-4. **No admin mode needed**: Kiosk mode can be exited with Alt+F4 (toddlers unlikely to discover)
-5. **Simple server**: Express static file server only - no complex backend needed
-6. **Modular architecture**: CSS and JS split into modules for scalability
-7. **Reference resolution**: Everything designed at 1280x800, scales automatically
-8. **Background preferences**: Saved via Storage utility, loaded on startup via `Background.load()`
+- A systemd service runs `node server.js` as the `winnieos` user out of `/home/winnieos/app` (reference unit at `deploy/winnieos-server.service`).
+- A polling timer on the device fetches `origin/main`, `git reset --hard`, runs `npm ci` + `npm run build` if the lockfile changed, and restarts the service.
+- Already-loaded Chromium pages detect the new build via `/healthz` (returns `{ version: <git SHA> }`) and reload themselves — no need to kill the browser.
+- All of this update machinery lives on the target device, not in this repo.
 
 ## Configuration System
 
-- **Shared loader**: `lib/config-loader.js` handles all config loading (used by both `server.js` and `vite.config.js`)
-- **Configuration merges**: `local.json` overrides `default.json` (deep merge for nested objects)
-- **Default config**: `config/default.json` is required and auto-created from fallback defaults if missing
-- **Local config**: `config/local.json` is optional and not auto-created (use template during setup)
-- Default port: 3000
-- Configurable via `config/local.json`:
-  - Server port/host
-  - Logging level
-  - Chromium executable path (auto-detected if not set)
-  - Display reference resolution (default: 1280x800)
-  - Apps enabled list (`apps.enabled` array) - if missing/unavailable, defaults to `['colors']` only (safe fallback)
-- Runtime config exposed at `/winnieos-config.json` (safe subset for frontend)
-- Debug endpoint at `/winnieos-debug.json` (localhost-only) for diagnosing config/dist mismatches
-- Frontend loads config via `WinnieOS.Config.load()` (cached, async)
+- **Shared loader:** `lib/config-loader.js` handles all config loading (used by both `server.js` and `vite.config.js`)
+- **Merging:** `local.json` overrides `default.json` via deep merge (arrays are replaced, not merged)
+- **`default.json`** is required and auto-created from fallback defaults if missing
+- **`local.json`** is optional and gitignored
+- **Runtime config** is exposed at `/winnieos-config.json` (safe subset)
+- **Debug endpoint** at `/winnieos-debug.json` (localhost-only) for diagnosing config/dist mismatches
 
-## Key Scripts
-
-- `scripts/setup.ps1` - Initial setup (checks prereqs, installs deps, creates config, optional service install, builds dist/ if needed)
-- `scripts/install-service.ps1` - Windows Service installer wrapper (requires admin, builds dist/ if needed, stops service before uninstall)
-- `scripts/install-service.js` - Node.js service installer (uses node-windows, runs service-startup.js)
-- `scripts/restart-service.ps1` - Service restart script (simple restart, service handles updates)
-- `scripts/debug-startup.ps1` - Debug script for service startup issues
-- `service-startup.js` - Service entry point (git pull, npm install, build detection, conditional build, start server)
-
-## Git Workflow
-
-- **Default branch**: `main` (script auto-detects current branch)
-- **Update mechanism**: `git fetch --all && git reset --hard origin/<branch>`
-- **What survives updates**: 
-  - `config/local.json` (gitignored)
-  - `node_modules/` (reinstalled on startup)
-  - Browser storage (via `WinnieOS.Utils.Storage` / localStorage/IndexedDB)
+Keys:
+- `server.port` / `server.host`
+- `logging.level` / `logging.filename`
+- `display.reference.width` / `display.reference.height`
+- `apps.enabled` — array of app IDs to show on the desktop (missing or unavailable → defaults to `['colors']` as a safe fallback)
 
 ## Common Tasks for Agents
 
-### Adding New Features
-
-**Adding an App (preferred extension path):**
-1. Create: `src/js/apps/<appId>/app.js`
+### Adding an App (preferred extension path)
+1. Create `src/js/apps/<appId>/app.js`
 2. Export a default app definition with `id`, `title`, and `mount({ root, nav })`
-3. (Optional) Add `iconEmoji` (e.g., `iconEmoji: '📝'`) or `iconSrc` (path to image in `public/assets/images/apps/...`)
-4. Add app ID to `config/default.json` → `apps.enabled` array (or it will be auto-enabled)
+3. (Optional) Add `iconEmoji` or `iconSrc` (path into `public/assets/images/apps/`)
+4. Add the app ID to `config/default.json` → `apps.enabled` (or rely on auto-enable)
 5. Build and commit `dist/`
 
-**Adding a Component:**
-1. Create CSS file: `src/css/components/my-component.css`
-2. Import in `src/css/components.css`: `@import 'components/my-component.css';`
-3. Create JS file: `src/js/components/MyComponent.js` (ES module with `export`)
-4. Register in `WinnieOS.Components` namespace (attach to `window.WinnieOS`)
-5. Import in `src/main.js` if needed (component registry is already imported)
+### Adding a Component
+1. `src/css/components/my-component.css`
+2. Import it from `src/css/components.css`
+3. `src/js/components/MyComponent.js` — ES module, attach to `window.WinnieOS.Components`
+4. Import in `src/main.js` if the component registry doesn't pick it up
 
-**Adding a Screen/Page:**
-1. Create JS screen module in `src/js/screens/`
-2. Register in `src/js/screens/index.js`
+### Adding a Screen
+1. Create a screen module in `src/js/screens/`
+2. Register it in `src/js/screens/index.js`
 3. Screens are switched by `WinnieOS.Navigation` and mounted by `WinnieOS.Shell`
 
-**Adding a Utility:**
-1. Create utility file: `src/js/utils/my-utility.js` (ES module with `export`)
-2. Add to `WinnieOS.Utils` namespace (attach to `window.WinnieOS`)
-3. Import in `src/js/utils/index.js` to register it (utilities are auto-loaded)
-4. Examples:
-   - `src/js/utils/storage.js` - LocalStorage wrapper (`WinnieOS.Utils.Storage`)
-   - `src/js/utils/background.js` - Background color management (`WinnieOS.Utils.Background`)
-   - `src/js/utils/audio.js` - Web Audio API sound system (`WinnieOS.Utils.Audio`) - UI feedback, navigation cues, game sounds
+### Adding a Utility
+1. `src/js/utils/my-utility.js` — ES module
+2. Attach to `window.WinnieOS.Utils`
+3. Import from `src/js/utils/index.js`
 
-### Changing Server Configuration
-
-- Edit `config/default.json` for defaults (affects all installations)
-- The shared config loader (`lib/config-loader.js`) handles loading and merging
-- Both `server.js` and `vite.config.js` use the same loader for consistency
-- Document changes in README.md
-
-### Adding npm Dependencies
-
+### Adding an npm dependency
 1. `npm install <package>`
-2. Test locally (`npm run dev`, `npm test`)
-3. Build and test production (`npm run build`, `npm start`)
-4. Commit `package.json`, `package-lock.json`, and `dist/` (always commit dist/ if build changed)
-5. Production will auto-install on next service start via `npm install` in service-startup.js
-6. Production will rebuild `dist/` if missing (but it should be committed)
+2. Test locally (`npm run dev`, `npm test`), then build (`npm run build`)
+3. Commit `package.json`, `package-lock.json`, and `dist/`
 
 ### Debugging Production Issues
-
-1. Check logs: `logs/winnieos.log`
-2. Verify service status: `Get-Service "WinnieOS Server"`
-3. Check git status: ensure remote is configured
-4. Ensure `dist/` exists and is up to date (should be committed, but service will build if missing or code changed)
-5. Test server manually: `npm start` (production server, serves `dist/`) or `npm run dev` (Vite dev server)
-6. Rebuild if needed: `npm run build` to regenerate `dist/`
-7. Service startup: The service automatically handles git pull, build detection, and server startup on boot
-
-### Testing Scripts
-
-- PowerShell scripts can be tested for syntax: `$null = [System.Management.Automation.PSParser]::Tokenize(...)`
-- Node.js scripts: `node -c <script.js>`
-- Service installation requires Administrator privileges (not testable on dev machine without admin)
+1. Check `logs/winnieos.log` (or `journalctl -u winnieos-server.service` on the target)
+2. Verify `dist/` exists and is up-to-date
+3. Hit `/winnieos-debug.json` from the device for config/dist introspection
+4. `npm run build` locally to regenerate `dist/` if needed
 
 ## Things to Remember
 
-1. **Keep server.js simple** - It's just a static file server serving `dist/`, don't add complexity
-2. **Source files in src/** - All web app source code goes in `src/` (CSS, JS ES modules)
-3. **Build output in dist/** - Production build goes to `dist/` (committed to git)
-4. **Static assets in public/** - Images/fonts go in `public/assets/` (copied to dist/ by Vite)
-5. **ES modules** - All JavaScript uses `import`/`export`, not IIFE
-6. **Preserve namespace** - Attach to `window.WinnieOS` for compatibility
-7. **Config is merged** - Local overrides default via deep merge (handled by `lib/config-loader.js`)
-8. **Shared config loader** - `lib/config-loader.js` is used by both server and Vite for consistency
-9. **Production uses force pull** - Local code changes are overwritten on startup
-10. **Service runs as background process** - Don't expect console output, check logs instead
-11. **Chromium path auto-detection** - Script tries common paths if not configured
-12. **Git branch detection** - Scripts detect current branch, don't hardcode "main"
-13. **Reference resolution** - Everything designed at 1280x800px, scales automatically
-14. **Design tokens** - Always use CSS custom properties, never hardcode values
-15. **Modular structure** - One component = one CSS file + one JS file
-16. **px units only** - Use px units for sizing (no vw/vh inside canvas)
-17. **Config loader** - `lib/config-loader.js` provides single source of truth for config loading
-
-## CSS Architecture Guidelines
-
-- **Design tokens first**: Always use CSS custom properties from `src/css/tokens.css`
-- **Modular files**: One component = one CSS file in `src/css/components/`
-- **Loading order**: Imported in `src/main.js` as tokens → base → layout → components
-- **px units**: All sizing in px (designed for 1280x800)
-- **No viewport units**: Don't use vw/vh inside canvas
-- **Utility classes**: Use layout utilities for common patterns
-
-## JavaScript Architecture Guidelines
-
-- **ES modules**: Use `import`/`export` syntax
-- **Namespace**: All code under `WinnieOS` namespace (attach to `window.WinnieOS`)
-- **Modular files**: One feature = one file
-- **Loading order**: Imported in `src/main.js` as core → utils → components
-- **Documentation**: Document public APIs
-- **No globals**: Don't pollute global scope outside namespace
+1. **Keep `server.js` simple** — it is a static file server plus a couple of JSON endpoints; don't add complexity.
+2. **Source files in `src/`** — CSS, JS ES modules.
+3. **Build output in `dist/`** — committed to git.
+4. **Static assets in `public/`** — Vite copies them into `dist/`.
+5. **ES modules** — all JavaScript uses `import`/`export`.
+6. **Preserve the namespace** — attach to `window.WinnieOS`.
+7. **Config is merged** — local overrides default via deep merge (`lib/config-loader.js`).
+8. **Reference resolution** — everything designed at 1280×800px, scales automatically.
+9. **Design tokens** — always use CSS custom properties.
+10. **Modular structure** — one component = one CSS file + one JS file.
+11. **px units only** — no vw/vh inside the canvas.
 
 ## Testing Approach
 
-- **Development**: Use `npm run dev` for Vite HMR, or `npm start` for production server (serves `dist/`), browser at localhost:3000
-- **Unit tests**: Use `npm test` (Vitest) for JavaScript module tests
-- **Build**: Always test production build with `npm run build` before committing
-- **Scripts**: Syntax validation, dry-run where possible
-- **Service**: Requires admin, test on production laptop only
-- **Git operations**: Handle gracefully when not in git repo or remote not configured
-- **Viewport scaling**: Test at 1280x800 (reference) and other resolutions
-- **Design tokens**: Verify CSS custom properties are accessible
-
-## When Starting Fresh Context
-
-1. Check README.md for detailed information
-2. Review recent git commits/logs for what's been worked on
-3. Check `logs/winnieos.log` if debugging issues
-4. Verify project structure matches expected layout:
-   - `lib/config-loader.js` - Shared configuration loader
-   - `src/css/` - Modular CSS files
-   - `src/js/core/` - Core systems (ES modules)
-   - `src/js/components/` - Component modules (ES modules)
-   - `src/js/utils/` - Utility functions (Storage, Background, Audio)
-   - `src/js/games/` - Game modules (full-screen interactive experiences)
-   - `src/js/apps/` - App plug-ins (auto-discovered)
-   - `dist/` - Production build output (committed)
-   - `public/assets/` - Static assets (images, fonts)
-   - `config/default.json` - Default configuration (committed)
-
-## Target Device Context
-
-- 8" laptop, 1280x800 resolution (16:10 aspect ratio)
-- Windows 11
-- Touch + Keyboard input
-- Chromium-based browser in kiosk mode
-- Optimize UI for this specific resolution (reference point)
-- Scales to other resolutions automatically
-
-## Scalability Considerations
-
-The architecture is designed to scale from a simple welcome screen to a full "pretend OS":
-
-- **Vite build system**: Fast development, optimized production builds
-- **ES modules**: Modern JavaScript module system, tree-shaking support
-- **Modular CSS**: Easy to add component styles
-- **Modular JS**: Easy to add components and utilities
-- **Component system**: Foundation ready for component library
-- **Design tokens**: Consistent styling across all features
-- **Namespace structure**: Prevents conflicts as codebase grows
-- **Testing**: Vitest foundation for unit tests
-
-**Don't over-engineer**: Keep it simple until complexity is needed, then add structure incrementally.
+- **Development:** `npm run dev` for HMR; `npm start` for production-like.
+- **Unit tests:** `npm test` (Vitest).
+- **Build:** always test the production build with `npm run build` before committing.
+- **Viewport scaling:** verify at 1280×800 (reference) and at a couple of other sizes.
 
 ## Current Apps
 
-Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Currently enabled by default:
-- `notepad` - Rich text editor with color picker and emoji palette (toddler-first, auto-saves locally, typing sounds)
-- `letters` - 2D physics pachinko-style letter matching game (uses Matter.js, full audio integration)
-- `colors` - Radial color picker for changing background color (uses Background utility, continuous tonal drag sound)
-- `slalom` - "Jet" — toddler-friendly space jet slalom game (Canvas 2D, dual-loop engine, day/night progression, touch + keyboard + mouse input). Ported from JSlalom2024 Winnie Edition. Game module at `src/js/games/slalom/game.js`.
+Apps are auto-discovered from `src/js/apps/<appId>/app.js`. Enabled by default:
+- `notepad` — rich text editor with color picker and emoji palette
+- `letters` — 2D physics pachinko-style letter matching (Matter.js)
+- `colors` — radial color picker for the background
+- `slalom` — "Jet", toddler-friendly space slalom (Canvas 2D, day/night progression)
+- `floorzero` — WinnieRPG alpha, iframe-hosted
 
-Additional apps exist as stubs (placeholders for future development): `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story`. These can be enabled by adding their IDs to `config/default.json` → `apps.enabled`.
+Stubs exist for `animals`, `blocks`, `bubbles`, `dance`, `garden`, `memory`, `music`, `numbers`, `paint`, `piano`, `shapes`, `story` — enable via `config/default.json` → `apps.enabled`.

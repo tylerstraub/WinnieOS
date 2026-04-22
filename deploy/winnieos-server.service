@@ -1,0 +1,16 @@
+[Unit]
+Description=WinnieOS Node server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=winnieos
+Group=winnieos
+WorkingDirectory=/home/winnieos/app
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

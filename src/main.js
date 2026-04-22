@@ -19,6 +19,7 @@ import './js/core/index.js';
 
 // JavaScript: Utilities (load before components)
 import './js/utils/index.js';
+import './js/utils/health-poll.js';
 
 // JavaScript: Components (load after utilities)
 import './js/components/index.js';
