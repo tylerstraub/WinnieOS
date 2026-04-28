@@ -338,7 +338,9 @@ export function createSlalomGame({ canvas }) {
       const source = audioCtx.createBufferSource();
       source.buffer = bombBuffer;
       source.playbackRate.value = 0.8 + Math.random() * 0.5;
-      source.connect(audioCtx.destination);
+      const gain = audioCtx.createGain();
+      gain.gain.value = 0.2;
+      source.connect(gain).connect(audioCtx.destination);
       source.start();
     } catch (_) {}
   }
@@ -361,9 +363,7 @@ export function createSlalomGame({ canvas }) {
       }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      const gain = ctx.createGain();
-      gain.gain.value = 0.18;
-      source.connect(gain).connect(ctx.destination);
+      source.connect(ctx.destination);
       source.start();
     });
   }
