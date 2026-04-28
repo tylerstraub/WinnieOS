@@ -418,7 +418,9 @@ export function createSlalomGame({ canvas }) {
       }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(ctx.destination);
+      const gain = ctx.createGain();
+      gain.gain.value = 0.2;
+      source.connect(gain).connect(ctx.destination);
       source.start();
     });
   }
