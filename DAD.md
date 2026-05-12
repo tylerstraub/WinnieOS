@@ -182,7 +182,7 @@ The kiosk serves `dist/` from the committed build, so any change you want on the
 - Tests: `npm test`
 - Build: `npm run build` (then **commit `dist/`**)
 
-GitHub Pages builds its own `dist/` from CI on every push to `master` (see `.github/workflows/pages.yml`), so the Pages preview will reflect your change whether or not you committed `dist/` — but the kiosk won't.
+GitHub Pages builds its own `dist/` from CI when a push to `master` touches a build-affecting path (`src/`, `public/`, `vite.config.js`, etc. — see `.github/workflows/pages.yml`), so the Pages preview will reflect your change whether or not you committed `dist/`. Doc-only commits (README/DAD/CLAUDE) intentionally don't trigger a redeploy; use the workflow's manual run if you ever need one. The kiosk follows its own pull-and-rebuild loop and is unaffected by this.
 
 ## Debugging tips
 
