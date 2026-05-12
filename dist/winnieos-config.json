@@ -1,0 +1,16 @@
+{
+  "display": {
+    "reference": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  "apps": {
+    "enabled": [
+      "notepad",
+      "letters",
+      "colors",
+      "slalom"
+    ]
+  }
+}

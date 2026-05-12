@@ -5,6 +5,10 @@
  * In dev, Vite serves the same endpoint via middleware.
  */
 
+// Resolve under Vite's base so the same source works at both the kiosk's
+// root ('/') and at a GitHub Pages subpath ('/WinnieOS/').
+const CONFIG_URL = (import.meta.env.BASE_URL || '/') + 'winnieos-config.json';
+
 let cached = null;
 let inFlight = null;
 
@@ -50,7 +54,7 @@ export const RuntimeConfig = {
             let cfg = null;
             for (let i = 0; i < attempts.length; i++) {
                 const a = attempts[i];
-                cfg = await fetchJsonWithTimeout('/winnieos-config.json', a.timeoutMs);
+                cfg = await fetchJsonWithTimeout(CONFIG_URL, a.timeoutMs);
                 if (cfg && typeof cfg === 'object') break;
                 if (a.sleepMs) await delay(a.sleepMs);
             }

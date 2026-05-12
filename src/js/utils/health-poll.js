@@ -18,8 +18,15 @@
 
 const POLL_INTERVAL_MS = 5000;
 
+// Resolve under Vite's base so the same source works at both the kiosk's
+// root ('/') and at a GitHub Pages subpath ('/WinnieOS/'). On Pages there
+// is no /healthz at all — the 404 surfaces here as a thrown error, the
+// initial fetchVersion() catch below abandons the poll, and the kiosk's
+// deploy-reload behavior is unaffected.
+const HEALTH_URL = (import.meta.env.BASE_URL || '/') + 'healthz';
+
 async function fetchVersion() {
-    const res = await fetch('/healthz', { cache: 'no-store' });
+    const res = await fetch(HEALTH_URL, { cache: 'no-store' });
     if (!res.ok) throw new Error(`healthz ${res.status}`);
     const data = await res.json();
     if (typeof data.version !== 'string' || !data.version) {
