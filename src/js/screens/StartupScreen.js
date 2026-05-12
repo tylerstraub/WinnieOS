@@ -3,7 +3,7 @@
  * Simple, fun startup sequence that can later evolve into a real boot pipeline.
  */
 
-const LOGO_SRC = '/assets/images/winnieOS_logo_temp.png';
+const LOGO_SRC = (import.meta.env.BASE_URL || '/') + 'assets/images/winnieOS_logo_temp.png';
 
 export const StartupScreen = (function() {
     let rootEl = null;
