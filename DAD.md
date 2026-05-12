@@ -1,8 +1,8 @@
 # Dad Guide: Extending WinnieOS
 
-WinnieOS is a local, offline-first “virtual computer” designed for a toddler. The UI is intentionally simple: **startup → desktop → app**, with a **global Home button** that always returns to the desktop.
+WinnieOS is a local, offline-first "virtual computer" for one young learner — built to mature alongside her. The UI is intentionally simple: **startup → desktop → app**, with a **global Home button** that always returns to the desktop.
 
-This guide is the practical reference for adding new “apps” and working safely within the architecture.
+This guide is the practical reference for adding new "apps" and working safely within the architecture. Keep in mind the project's instructional bent: keyboard interaction is a primary surface, touch is supported as a comfort accommodation for the small device, and apps should have real concepts underneath the play.
 
 ## Mental model (the layers)
 
@@ -18,6 +18,15 @@ This guide is the practical reference for adding new “apps” and working safe
   - Startup screen, desktop screen, and app host screen
 - **Apps (plug-ins)**
   - Dad adds apps; desktop auto-discovers them and shows big tiles
+
+## Two app shapes
+
+There are two conventions in the repo. Pick the one that fits the app's complexity:
+
+- **Inline apps** — small UI, no game loop. The whole app lives in `src/js/apps/<id>/app.js` (Colors, Notepad, Bubbles, etc.). Use this for the majority of apps.
+- **Thin-adapter apps** — anything with a real game loop, canvas rendering, or substantial mechanics. `src/js/apps/<id>/app.js` is a small shell that sets up the DOM and imports a factory from `src/js/games/<id>/game.js`. The factory returns `{ start, dispose }` and owns its own RAF loop, timers, and cleanup. See `src/js/apps/letters/app.js` + `src/js/games/letters/game.js`, and Slalom for the canonical examples.
+
+Start inline; promote to thin-adapter when the app outgrows it.
 
 ## Non-negotiable UI rules (keeps scaling sane)
 
@@ -51,7 +60,7 @@ Export a single app definition:
 export default {
   id: 'balloons',
   title: 'Balloons',
-  iconEmoji: '🎈',         // OR: iconSrc: '/assets/images/apps/balloons.png'
+  iconEmoji: '🎈',         // OR an image — see step 3 for iconSrc
   sortOrder: 40,           // optional
 
   mount: function ({ root, nav }) {
@@ -74,12 +83,32 @@ export default {
 };
 ```
 
-That’s it—WinnieOS auto-discovers apps via Vite and adds them to the desktop.
+Vite auto-discovers the module via `import.meta.glob('./*/app.js', { eager: true })`.
 
-### 2) (Optional) Add an icon image
+### 2) Enable the app in config
+
+Auto-discovery loads the module, but the desktop only shows apps whose id is in `config/default.json` → `apps.enabled`:
+
+```json
+{
+  "apps": {
+    "enabled": ["notepad", "letters", "colors", "slalom", "balloons"]
+  }
+}
+```
+
+If the config never loads (e.g. server isn't ready yet), the desktop conservatively falls back to showing only `colors`, so an app missing from `apps.enabled` is the #1 reason a new app silently doesn't appear. On the kiosk, `config/local.json` can override this without rebuilding — see the Configuration section in `README.md`.
+
+### 3) (Optional) Add an icon image
 
 - Put the file in: `public/assets/images/apps/balloons.png`
-- Reference it via: `iconSrc: '/assets/images/apps/balloons.png'`
+- Reference it via `import.meta.env.BASE_URL` so it resolves correctly on both the kiosk (`/`) and GitHub Pages (`/WinnieOS/`):
+
+```javascript
+iconSrc: import.meta.env.BASE_URL + 'assets/images/apps/balloons.png'
+```
+
+A root-anchored `'/assets/...'` string will work on the kiosk but 404 on Pages.
 
 ## Styling an app
 
@@ -132,28 +161,33 @@ Audio.ensure();
 // Unlock on first user gesture (call before playing sounds)
 Audio.unlock();
 
-// Play sound cues
+// Common cues
 Audio.launch(0.8);        // App launch
 Audio.tick();             // Subtle tap
 Audio.pop(0.6);           // Emoji/reveal
-Audio.type(0.3, 'alpha'); // Typing sound
+Audio.type(0.3, 'alpha'); // Typing sound — flavors: 'alpha' | 'space' | 'enter'
 Audio.poof(0.7);          // Clear/close
 Audio.buzz(0.5);          // Error state
+Audio.star(0.8);          // Pickup / reward jingle
+Audio.ready(0.7);         // Get-ready cue (used at app start)
 ```
+
+See `src/js/utils/audio.js` for the full surface — there's more (e.g. `reward`, `plink`, `bounce`, `colorDrag*`, `drumroll`, `setMasterLevel`) for richer apps.
 
 ## Build + deploy (important)
 
-Production serves `dist/` and expects it to be committed.
+The kiosk serves `dist/` from the committed build, so any change you want on the laptop needs the rebuilt `dist/` committed alongside the source change.
 
 - Dev: `npm run dev`
 - Tests: `npm test`
 - Build: `npm run build` (then **commit `dist/`**)
 
+GitHub Pages builds its own `dist/` from CI on every push to `master` (see `.github/workflows/pages.yml`), so the Pages preview will reflect your change whether or not you committed `dist/` — but the kiosk won't.
+
 ## Debugging tips
 
-- View scaling metrics:
-  - `WinnieOS.Viewport.getMetrics()` in the browser console
-- If you see “Loading…” forever:
-  - JS bundle likely failed to load, or the server is serving a stale `dist/`
+- View scaling metrics: `WinnieOS.Viewport.getMetrics()` in the browser console.
+- New app not on the desktop? First check `config/default.json` → `apps.enabled` includes the new id (see step 2 above). Auto-discovery without enablement is the most common cause.
+- Stuck on the gradient background with no boot animation? The JS bundle likely failed to load — check the browser console.
 
 
