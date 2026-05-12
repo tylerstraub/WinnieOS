@@ -99,12 +99,16 @@ app.get('/winnieos-debug.json', (req, res) => {
 
   const assetsDir = path.join(distPath, 'assets');
   let assetFiles = [];
+  let assetReadError = null;
   try {
     if (fs.existsSync(assetsDir)) {
       assetFiles = fs.readdirSync(assetsDir).filter((f) => f.endsWith('.js') || f.endsWith('.css'));
     }
-  } catch (_) {
-    assetFiles = [];
+  } catch (err) {
+    // The whole point of /winnieos-debug.json is diagnosing "wrong dist" issues, so
+    // a failure to list dist/assets is exactly the kind of thing the caller needs to see.
+    assetReadError = err && err.message ? err.message : String(err);
+    logger.warn(`Failed to read dist/assets for /winnieos-debug.json: ${assetReadError}`);
   }
 
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -123,7 +127,8 @@ app.get('/winnieos-debug.json', (req, res) => {
       apps: config.apps
     },
     dist: {
-      assets: assetFiles
+      assets: assetFiles,
+      assetReadError
     }
   });
 });

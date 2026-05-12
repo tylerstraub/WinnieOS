@@ -158,14 +158,18 @@ export const Shell = {
         if (!unlockGesturesInstalled && typeof document !== 'undefined') {
             unlockGesturesInstalled = true;
             try {
-                // First real gesture unlocks the AudioContext (Chrome autoplay policy)
-                document.addEventListener('pointerdown', () => {
-                    try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
-                }, { capture: true, passive: true, once: true });
-                document.addEventListener('keydown', () => {
-                    try { Audio.unlock().catch(() => {}); } catch (_) { /* ignore */ }
-                }, { capture: true, once: true });
-            } catch (_) { /* ignore */ }
+                // First real gesture unlocks the AudioContext (Chrome autoplay policy).
+                // Promise rejection here is the *expected* autoplay-policy path and
+                // stays silent. Synchronous throws are unexpected and worth logging.
+                const safeUnlock = () => {
+                    try { Audio.unlock().catch(() => {}); }
+                    catch (err) { console.warn('WinnieOS: Audio.unlock threw synchronously.', err); }
+                };
+                document.addEventListener('pointerdown', safeUnlock, { capture: true, passive: true, once: true });
+                document.addEventListener('keydown', safeUnlock, { capture: true, once: true });
+            } catch (err) {
+                console.warn('WinnieOS: failed to attach audio-unlock gesture listeners.', err);
+            }
         }
 
         // Start navigation and mount initial screen

@@ -76,7 +76,9 @@ function init() {
 
     // Apply config-driven default reference resolution (non-persistent) after core is up.
     // This ensures we don't block startup, and Viewport will react via `winnieos:displaychange`.
-    configPromise.then(applyDisplayDefaultsFromConfig).catch(() => {});
+    configPromise
+        .then(applyDisplayDefaultsFromConfig)
+        .catch((err) => console.warn('WinnieOS: config load failed; using stored/default reference resolution.', err));
 }
 
 // Initialize when DOM is ready
