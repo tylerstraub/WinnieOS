@@ -2,7 +2,7 @@
  * Colors App
  * 
  * Simplified RGB color picker for changing WinnieOS background color.
- * Large touch-friendly interface with smooth animations.
+ * Large, comfortable hit-targets with smooth animations.
  */
 
 import { Background } from '../../utils/background.js';
@@ -310,7 +310,7 @@ export default {
         };
 
         const onPointerDown = (e) => {
-            // Only primary pointer; keep it simple for toddlers (no multi-touch)
+            // Only primary pointer; deliberately no multi-touch (one finger, one color)
             if (activePointerId !== null) return;
             activePointerId = e.pointerId;
             try { pickerArea.setPointerCapture(activePointerId); } catch (_) { /* ignore */ }

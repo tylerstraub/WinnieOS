@@ -22,3 +22,6 @@ desktop.ini
 
 # Claude Code local settings (contains secrets)
 .claude/settings.local.json
+
+# Playwright MCP session artifacts
+.playwright-mcp/

@@ -1,7 +1,7 @@
 /**
  * Jet Slalom (Game)
  *
- * A toddler-friendly space jet slalom — steer left/right to dodge
+ * A gentle space jet slalom — steer left/right to dodge
  * colorful diamond obstacles, earn stars, enjoy candy explosions.
  *
  * Ported from JSlalom2024 "Winnie Edition" into the WinnieOS app framework.

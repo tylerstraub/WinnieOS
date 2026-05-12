@@ -1,7 +1,7 @@
 /**
  * Notepad App
  *
- * Toddler-first, single endless note:
+ * Single endless note, deliberately stripped down:
  * - Big writing area (contenteditable)
  * - Tap a color: new typing uses that color
  * - Emoji palette: insert emoji at caret
@@ -13,7 +13,7 @@ import { Audio } from '../../utils/audio.js';
 
 const STORAGE_KEY = 'apps.notepad.v1';
 
-// Toddler-safe palette (simple, recognizable, high-contrast on "paper")
+// Small, recognizable palette — high-contrast on "paper"
 const COLOR_SWATCHES = [
     { id: 'black', hex: '#111111' },
     { id: 'red', hex: '#E11D48' },
@@ -390,8 +390,8 @@ export default {
             try { emojiStripInner.scrollLeft = 0; } catch (_) { /* ignore */ }
         });
 
-        // Safe hook: recover focus if child tries to type while editor is unfocused
-        // This handles the edge case where toddlers tap around and lose focus
+        // Safe hook: recover focus if the user tries to type while editor is unfocused.
+        // Handles the case where stray taps move focus off the textarea.
         const onGlobalKeyDown = (e) => {
             // Only handle printable characters (not special keys like Escape, Tab, etc.)
             // Check if key is a single character that would produce text

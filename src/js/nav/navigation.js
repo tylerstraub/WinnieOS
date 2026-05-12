@@ -4,7 +4,7 @@
  * Very small in-memory navigation state machine:
  * - startup -> desktop -> app
  *
- * We keep it simple and toddler-friendly:
+ * Kept deliberately small:
  * - Home always returns to desktop (no deep back stack yet).
  */
 

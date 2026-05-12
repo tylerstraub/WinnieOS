@@ -81,21 +81,21 @@ describe('Apps registry filtering by config', () => {
         // Mock config with multiple apps enabled
         mockConfig = {
             apps: {
-                enabled: ['colors', 'animals', 'blocks']
+                enabled: ['colors', 'letters', 'notepad']
             }
         };
-        
+
         // Load config
         if (Apps.refreshConfig) {
             await Apps.refreshConfig();
         }
-        
+
         const filteredApps = Apps.list();
-        
+
         // Should return exactly the enabled apps
         expect(filteredApps.length).toBe(3);
         const appIds = filteredApps.map(app => app.id).sort();
-        expect(appIds).toEqual(['animals', 'blocks', 'colors']);
+        expect(appIds).toEqual(['colors', 'letters', 'notepad']);
     });
 
     it('should return empty array when config.apps.enabled is empty', async () => {
@@ -184,9 +184,9 @@ describe('Apps registry filtering by config', () => {
         expect(colorsApp).not.toBeNull();
         expect(colorsApp.id).toBe('colors');
         
-        // Disabled app should return null
-        const animalsApp = Apps.get('animals');
-        expect(animalsApp).toBeNull();
+        // Disabled app (exists in registry, not in enabled list) should return null
+        const lettersApp = Apps.get('letters');
+        expect(lettersApp).toBeNull();
     });
 
     it('should handle race condition: wait for config before filtering', async () => {

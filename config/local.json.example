@@ -12,16 +12,7 @@
   "logging": {
     "level": "info"
   },
-  "chromium": {
-    "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-  },
   "apps": {
-    "enabled": [
-      "notepad",
-      "colors",
-      "animals",
-      "blocks",
-      "bubbles"
-    ]
+    "enabled": ["notepad", "letters", "colors", "slalom"]
   }
 }

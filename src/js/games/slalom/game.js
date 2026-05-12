@@ -1,7 +1,7 @@
 /**
  * Jet Slalom — WinnieOS Edition
  *
- * Ported from JSlalom2024 "Winnie Edition". A toddler-friendly space jet slalom
+ * Ported from JSlalom2024 "Winnie Edition". A gentle space jet slalom
  * rendered on Canvas 2D with a dual-loop architecture (55ms logic + 60fps RAF).
  *
  * Factory function returns { start, dispose } following the WinnieOS game contract.
@@ -979,7 +979,7 @@ export function createSlalomGame({ canvas }) {
     if (_lGlow < 0.01) _lGlow = 0;
     if (_rGlow < 0.01) _rGlow = 0;
 
-    // Arrow sizing — big enough for a toddler to notice and tap
+    // Arrow sizing — big enough to read at a glance and hit comfortably
     const arrowW = 28 * s;
     const arrowH = 40 * s;
     const margin = 14 * s;
