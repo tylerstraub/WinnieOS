@@ -3,7 +3,24 @@
  * Simple, fun startup sequence that can later evolve into a real boot pipeline.
  */
 
-const LOGO_SRC = (import.meta.env.BASE_URL || '/') + 'assets/images/winnieOS_logo_temp.png';
+const LOGO_SRC = (import.meta.env.BASE_URL || '/') + 'assets/images/winnieOS_logo_temp.webp';
+
+// Cap how long the boot will wait for the logo to arrive before giving up
+// and starting anyway. The asset is ~150 KB so this is only relevant on
+// very slow networks; without the cap a totally failed fetch would hang.
+const LOGO_PRELOAD_MAX_MS = 3000;
+
+function preloadImage(src, maxMs) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        img.onload = finish;
+        img.onerror = finish;
+        img.src = src;
+        setTimeout(finish, maxMs);
+    });
+}
 
 export const StartupScreen = (function() {
     let rootEl = null;
@@ -36,7 +53,13 @@ export const StartupScreen = (function() {
             statusEl.textContent = txt;
         };
 
-        // Room to grow: replace delays with real async work later (asset preload, migrations, etc.)
+        // Wait for the logo to be in cache before starting the timed steps,
+        // so the animation always plays with the logo visible — not just on
+        // localhost where the image arrives before first paint.
+        setStatus('Waking up WinnieOS');
+        await preloadImage(LOGO_SRC, LOGO_PRELOAD_MAX_MS);
+        if (cancelled) return;
+
         const steps = [
             { label: 'Waking up WinnieOS', run: () => delay(450) },
             { label: 'Checking apps', run: () => delay(450) },
