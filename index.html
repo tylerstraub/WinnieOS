@@ -8,26 +8,34 @@
     <style>
         /* ============================================
            WINNIEOS FOUNDATION PRINCIPLES
-           
+
            DEFAULT REFERENCE RESOLUTION: 1280x800 (16:10 aspect ratio)
            - All UI is designed in a single "virtual computer" coordinate system (reference resolution)
            - By default that coordinate system is 1280x800, but it may be changed via WinnieOS.Display
            - The entire application scales uniformly from the active reference resolution (no responsive reflow)
-           
+
            DOCUMENTATION:
            - See README.md for complete principles and architecture
            - See AGENTS.md for development context
            - All developers must understand these principles before making changes
            ============================================ */
+
+        /* Pre-bundle paint: keep the page on-brand from the very first frame
+           so the StartupScreen swap is invisible. Without this the browser
+           shows white + default-styled fallback text until the bundled CSS
+           arrives. Values mirror tokens.css --color-primary/--color-secondary. */
+        html, body { margin: 0; height: 100%; background: #667eea; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
     </style>
 </head>
 <body>
-    <div id="winnieos-canvas">
+    <div id="winnieos-canvas"></div>
+    <noscript>
         <div class="wos-html-fallback">
             <h1>WinnieOS</h1>
-            <p>Loading…</p>
+            <p>JavaScript is required.</p>
         </div>
-    </div>
+    </noscript>
 
     <!-- Vite entry point - Vite will replace this with bundled assets in production -->
     <script type="module" src="/src/main.js"></script>
