@@ -20,13 +20,5 @@
       "colors",
       "slalom"
     ]
-  },
-  "kiosk": {
-    "user": "WinnieOSKiosk"
-  },
-  "startup": {
-    "gitPull": true,
-    "buildOnChanges": true,
-    "buildOnMissing": true
   }
 }
