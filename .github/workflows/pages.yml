@@ -3,6 +3,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [master]
+    # Only fire when something that actually affects the build changes —
+    # README/DAD/CLAUDE edits don't churn Pages. workflow_dispatch below
+    # is the manual escape hatch if a deploy is ever needed regardless.
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.js'
+      - 'config/default.json'
+      - 'lib/config-loader.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.nvmrc'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
