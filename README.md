@@ -4,7 +4,7 @@ A small, custom computing environment for one young learner — Winnie. It runs 
 
 **Try it:** [tylerstraub.github.io/WinnieOS](https://tylerstraub.github.io/WinnieOS/) — the same source builds to GitHub Pages for preview in any modern browser.
 
-**For developers:** to add an app, start with [`DAD.md`](./DAD.md). For deeper architectural context, see [`AGENTS.md`](./AGENTS.md).
+**For developers:** to add an app, start with [`DAD.md`](./DAD.md). For grounding context (when working with AI agents in this repo), see [`CLAUDE.md`](./CLAUDE.md).
 
 ## What it's for
 
@@ -57,7 +57,7 @@ WinnieOS/
 ├── vitest.config.js
 ├── package.json
 ├── DAD.md                          # practical guide to adding apps
-└── AGENTS.md                       # context for AI agents
+└── CLAUDE.md                       # grounding context for AI-agent sessions
 ```
 
 ## Development
