@@ -29,9 +29,9 @@ export const StartupScreen = (function() {
 
     function clearTimers() {
         timers.forEach((resolve, id) => {
-            try { clearTimeout(id); } catch (_) { /* ignore */ }
-            // Ensure any awaiting code can continue and observe `cancelled`.
-            try { resolve(); } catch (_) { /* ignore */ }
+            clearTimeout(id);
+            // Unblock any pending delay() awaits so runBoot can observe `cancelled` and exit.
+            resolve();
         });
         timers.clear();
     }

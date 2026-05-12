@@ -17,12 +17,9 @@ import './js/core/viewport.js';
 import './js/core/kiosk.js';
 import './js/core/index.js';
 
-// JavaScript: Utilities (load before components)
+// JavaScript: Utilities
 import './js/utils/index.js';
 import './js/utils/health-poll.js';
-
-// JavaScript: Components (load after utilities)
-import './js/components/index.js';
 
 // JavaScript: WinnieOS UI Foundation (Shell + Navigation + Screens + Apps)
 import './js/apps/index.js';
