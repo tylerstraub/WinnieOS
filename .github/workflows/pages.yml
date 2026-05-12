@@ -4,15 +4,18 @@ on:
   push:
     branches: [master]
     # Only fire when something that actually affects the build changes —
-    # README/DAD/CLAUDE edits don't churn Pages. workflow_dispatch below
-    # is the manual escape hatch if a deploy is ever needed regardless.
+    # README/DAD/CLAUDE edits and test-only commits don't churn Pages.
+    # workflow_dispatch below is the manual escape hatch if a deploy is
+    # ever needed regardless.
     paths:
       - 'src/**'
+      - '!src/**/__tests__/**'
       - 'public/**'
       - 'index.html'
       - 'vite.config.js'
       - 'config/default.json'
       - 'lib/config-loader.js'
+      - '!lib/__tests__/**'
       - 'package.json'
       - 'package-lock.json'
       - '.nvmrc'
