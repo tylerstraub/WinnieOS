@@ -42,7 +42,16 @@ const MIN_INTERVAL = {
     scoreTick: 0.09,
     star: 0.35,
     // Typing can be rapid; keep it snappy but safely rate-limited.
-    type: 0.028
+    type: 0.028,
+    // Orbits-specific sound vocabulary (space / gravity theme).
+    emerge: 0.40,
+    swirl: 0.06,
+    materialize: 0.10,
+    dissolve: 0.06,
+    coalesce: 0.10,
+    absorb: 0.12,
+    vanish: 0.12,
+    deny: 0.20,
 };
 
 function now() {
@@ -998,6 +1007,304 @@ function playScoreTick(strength = 0.7) {
     }
 }
 
+// ── Orbits-specific sound design ────────────────────────────────────────────
+// Space / gravity themed sounds, distinct from the generic UI vocabulary
+// above. Same construction principles: short, layered (typically 1-2
+// oscillators + filtered noise), non-musical, rate-limited.
+
+/** App mount — three bright triangle chimes cascading upward.
+ *  Consonant A-major-ish intervals (with a touch of detune so it doesn't
+ *  read as a preset chord), staggered ~50 ms apart so it feels like a
+ *  little welcoming sparkle, not a sustained pad. */
+function playEmerge(strength = 0.6) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('emerge')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const notes = [
+        { f: 880,  delay: 0.000 },   // A5
+        { f: 1109, delay: 0.055 },   // C#6
+        { f: 1319, delay: 0.110 },   // E6
+    ];
+
+    for (const n of notes) {
+        const start = t + n.delay;
+        const o = c.createOscillator();
+        const o2 = c.createOscillator();   // soft sub-octave for warmth
+        const g = c.createGain();
+        const lp = c.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(3600, start);
+
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(n.f, start);
+        o.detune.setValueAtTime((Math.random() * 2 - 1) * 5, start);
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(n.f * 0.5, start);
+
+        envGain(g, start, 0.004, 0.28, 0.055 * (0.55 + 0.45 * s), 0.00001);
+        o.connect(lp);
+        o2.connect(lp);
+        lp.connect(g);
+        g.connect(master);
+        o.start(start);
+        o2.start(start);
+        o.stop(start + 0.32);
+        o2.stop(start + 0.32);
+    }
+
+    // Light high-frequency sparkle tail
+    playNoiseBurst(t + 0.04, 0.18, {
+        gainPeak: 0.005 + 0.006 * s,
+        hpHz: 4200,
+    });
+}
+
+/** Adjustment tick — a tiny tonal blip with a breath of bandpass noise. */
+function playSwirl() {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('swirl')) return;
+
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(740 + Math.random() * 240, t);
+    envGain(g, t, 0.002, 0.04, 0.013, 0.00001);
+    o.connect(g);
+    g.connect(master);
+    o.start(t);
+    o.stop(t + 0.06);
+
+    playNoiseBurst(t, 0.05, {
+        gainPeak: 0.003,
+        bpHz: 2200,
+        bpQ: 1.4,
+    });
+}
+
+/** Planet spawn — a warm triangle that swoops up to its target pitch + sparkle. */
+function playMaterialize(strength = 0.5) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('materialize')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o1 = c.createOscillator();
+    const o2 = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(2200, t);
+
+    const target = 540 + 80 * (Math.random() - 0.5);
+    o1.type = 'triangle';
+    o2.type = 'sine';
+    o1.frequency.setValueAtTime(target * 0.55, t);
+    o1.frequency.exponentialRampToValueAtTime(target, t + 0.10);
+    o2.frequency.setValueAtTime(target * 1.5, t);
+    o2.detune.setValueAtTime(-8, t);
+
+    envGain(g, t, 0.004, 0.20, 0.085 * (0.6 + 0.4 * s), 0.00001);
+    o1.connect(lp);
+    o2.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    o1.start(t);
+    o2.start(t);
+    o1.stop(t + 0.25);
+    o2.stop(t + 0.25);
+
+    playNoiseBurst(t, 0.10, {
+        gainPeak: 0.006 + 0.008 * s,
+        bpHz: 3200,
+        bpQ: 1.0,
+    });
+}
+
+/** Planet remove — descending sine + hi-pass noise tail (reverse of materialize). */
+function playDissolve(strength = 0.4) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('dissolve')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sine';
+    const base = 720 + 40 * (Math.random() - 0.5);
+    o.frequency.setValueAtTime(base, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(80, base * 0.45), t + 0.18);
+
+    envGain(g, t, 0.002, 0.18, 0.055 * (0.55 + 0.45 * s), 0.00001);
+    o.connect(g);
+    g.connect(master);
+    o.start(t);
+    o.stop(t + 0.21);
+
+    playNoiseBurst(t, 0.14, {
+        gainPeak: 0.005 + 0.005 * s,
+        hpHz: 2400,
+    });
+}
+
+/** Two planets merging — deep low double-sine with a slight pitch dip. */
+function playCoalesce(strength = 0.6) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('coalesce')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o1 = c.createOscillator();
+    const o2 = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(420, t);
+
+    const f1 = 78 + 28 * s;
+    const f2 = 158 + 52 * s;
+    o1.type = 'sine';
+    o2.type = 'sine';
+    o1.frequency.setValueAtTime(f1, t);
+    o2.frequency.setValueAtTime(f2, t);
+    o2.detune.setValueAtTime(-10, t);
+    o1.frequency.exponentialRampToValueAtTime(f1 * 0.88, t + 0.22);
+    o2.frequency.exponentialRampToValueAtTime(f2 * 0.88, t + 0.22);
+
+    envGain(g, t, 0.003, 0.28, 0.13 * (0.55 + 0.45 * s), 0.00001);
+    o1.connect(lp);
+    o2.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    o1.start(t);
+    o2.start(t);
+    o1.stop(t + 0.32);
+    o2.stop(t + 0.32);
+
+    playNoiseBurst(t, 0.20, {
+        gainPeak: 0.008 + 0.010 * s,
+        bpHz: 220,
+        bpQ: 0.6,
+    });
+}
+
+/** Planet absorbed by sun — bright sawtooth flash sweeping down into rumble. */
+function playAbsorb(strength = 0.6) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('absorb')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t);
+    lp.frequency.exponentialRampToValueAtTime(600, t + 0.30);
+
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(880 + 200 * s, t);
+    o.frequency.exponentialRampToValueAtTime(180, t + 0.28);
+
+    envGain(g, t, 0.002, 0.30, 0.085 * (0.55 + 0.45 * s), 0.00001);
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    o.start(t);
+    o.stop(t + 0.32);
+
+    playNoiseBurst(t, 0.20, {
+        gainPeak: 0.009 + 0.012 * s,
+        bpHz: 2400,
+        bpQ: 0.7,
+    });
+}
+
+/** Planet escapes off-screen — rising sine doppler + airy whoosh. */
+function playVanish(strength = 0.5) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('vanish')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(440 + 80 * s, t);
+    o.frequency.exponentialRampToValueAtTime(2200 + 600 * s, t + 0.35);
+
+    envGain(g, t, 0.008, 0.34, 0.065 * (0.55 + 0.45 * s), 0.00001);
+    o.connect(g);
+    g.connect(master);
+    o.start(t);
+    o.stop(t + 0.40);
+
+    playNoiseBurst(t, 0.30, {
+        gainPeak: 0.008 + 0.012 * s,
+        bpHz: 1800,
+        bpQ: 0.4,
+    });
+}
+
+/** Cap-rejected launch — descending square wave with subtle vibrato. */
+function playDeny(strength = 0.6) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('deny')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1100, t);
+
+    o.type = 'square';
+    o.frequency.setValueAtTime(220, t);
+    o.frequency.exponentialRampToValueAtTime(140, t + 0.22);
+
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(10, t);
+    lfoGain.gain.setValueAtTime(8, t);
+    lfo.connect(lfoGain);
+    lfoGain.connect(o.frequency);
+
+    envGain(g, t, 0.003, 0.22, 0.075 * (0.55 + 0.45 * s), 0.00001);
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    o.start(t);
+    lfo.start(t);
+    o.stop(t + 0.26);
+    lfo.stop(t + 0.26);
+
+    playNoiseBurst(t, 0.18, {
+        gainPeak: 0.006 + 0.008 * s,
+        bpHz: 360,
+        bpQ: 0.8,
+    });
+}
+
 function playStar(strength = 0.9) {
     const c = ensureContext();
     if (!c || !master) return;
@@ -1123,7 +1430,16 @@ export const Audio = {
     },
     drumroll: function(durationMs, strength) {
         return startDrumroll(durationMs, strength);
-    }
+    },
+    // Orbits sound vocabulary
+    emerge:      function(strength) { playEmerge(strength); },
+    swirl:       function()          { playSwirl(); },
+    materialize: function(strength) { playMaterialize(strength); },
+    dissolve:    function(strength) { playDissolve(strength); },
+    coalesce:    function(strength) { playCoalesce(strength); },
+    absorb:      function(strength) { playAbsorb(strength); },
+    vanish:      function(strength) { playVanish(strength); },
+    deny:        function(strength) { playDeny(strength); },
 };
 
 // Attach to window namespace for shared reuse

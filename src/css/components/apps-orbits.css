@@ -1,0 +1,196 @@
+/* ============================================
+   ORBITS — gravity sandbox
+   Full-bleed canvas + floating controls (no panel chrome).
+   HUD buttons mirror their keyboard bindings as visible key-pills.
+   ============================================ */
+
+.wos-orbits-app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+}
+
+/* Brief kinesthetic shake on rejection — paired with the canvas-drawn
+   red ring + X at the touch point and the counter flash. */
+.wos-orbits-app.is-shaking {
+    animation: orbits-app-shake 280ms ease-out;
+}
+@keyframes orbits-app-shake {
+    0%   { transform: translate(0, 0); }
+    20%  { transform: translate(-6px, 3px); }
+    40%  { transform: translate( 7px, -3px); }
+    60%  { transform: translate(-4px, 2px); }
+    80%  { transform: translate( 3px, -1px); }
+    100% { transform: translate(0, 0); }
+}
+
+.wos-orbits-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    outline: none;
+    cursor: crosshair;
+}
+
+/* HUD has no container — sliders and key-pills float directly over the
+   space backdrop. Layout only; visual weight comes from the controls.
+   z-index is explicit so planets/trails on the canvas never read as
+   passing *over* the UI. */
+.wos-orbits-hud {
+    position: absolute;
+    left: 32px;
+    right: 32px;
+    bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: var(--color-text);
+    font-family: var(--font-family);
+    z-index: 5;
+}
+
+.wos-orbits-hud-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.wos-orbits-hud-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+/* Body-count readout — floats top-right, on its own. Two visual states call
+   out "you're at capacity":
+   1. .is-full (sustained): amber tint + soft glow on the number.
+   2. .is-rejected (transient): brief red flash + shake when a launch was
+      blocked. The shake animation auto-finishes; restart by toggling the
+      class off, forcing a reflow, then back on. */
+.wos-orbits-count {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: var(--color-glass-strong);
+    backdrop-filter: blur(var(--blur-glass));
+    -webkit-backdrop-filter: blur(var(--blur-glass));
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-elev-1);
+    font-family: var(--font-family);
+    color: var(--color-text);
+    z-index: 5;
+}
+.wos-orbits-count-num {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
+    transition: color 200ms ease, text-shadow 200ms ease;
+}
+.wos-orbits-count-sep {
+    color: var(--color-text-muted);
+    margin: 0 2px;
+}
+
+.wos-orbits-count.is-full .wos-orbits-count-num {
+    color: #ffd166;
+    text-shadow: 0 0 10px rgba(255, 209, 102, 0.7);
+}
+
+.wos-orbits-count.is-rejected .wos-orbits-count-num {
+    animation: orbits-count-reject 460ms ease-out;
+}
+
+@keyframes orbits-count-reject {
+    0%   { transform: translateX(0);  color: #ff6b6b; text-shadow: 0 0 12px rgba(255, 107, 107, 0.85); }
+    20%  { transform: translateX(-5px); }
+    40%  { transform: translateX( 5px); }
+    60%  { transform: translateX(-3px); }
+    80%  { transform: translateX( 2px); color: #ff8e8e; }
+    100% { transform: translateX(0); }
+}
+
+/* ── Slider ────────────────────────────────────────────────────────── */
+.wos-orbits-slider {
+    flex: 1 1 auto;
+    min-width: 80px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    height: 28px;
+    cursor: pointer;
+}
+
+.wos-orbits-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.38);
+}
+.wos-orbits-slider::-moz-range-track {
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.38);
+}
+
+.wos-orbits-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-full);
+    background: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    margin-top: -8px;
+}
+.wos-orbits-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-full);
+    background: #ffffff;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* ── Keyboard-pill button ──
+   Each shows the literal keyboard character that triggers the same action,
+   so the on-screen ↔ keyboard mapping stays explicit. Now compact:
+   single-line glyph only, no caption, lighter chrome. */
+.wos-orbits-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch-target-min);
+    min-height: var(--touch-target-min);
+    padding: 0 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--color-text);
+    font-family: var(--font-family);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 120ms ease, transform 80ms ease, border-color 120ms ease;
+}
+.wos-orbits-key:hover {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+.wos-orbits-key:active { transform: translateY(1px); }
