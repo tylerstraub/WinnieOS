@@ -93,11 +93,11 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
   // ── World state ───────────────────────────────────────────────────────
   let sunMass = DEFAULT_SUN_MASS;
   let timeScale = 1.0;          // 0 (paused) .. 2.0 (fast)
-  let frame = 0;
   let physicsStep = 0;
-  // Star twinkle clock — advances at a rate proportional to timeScale, so
-  // when the user pauses time the stars freeze, and at 2× they shimmer faster.
-  let starTime = 0;
+  // Animation clock — advances proportional to timeScale, so star
+  // twinkling AND the sun's corona / rays / hotspots all freeze when the
+  // user pauses time and speed up together at 2×.
+  let animClock = 0;
 
   /** @type {Array<{x:number,y:number,vx:number,vy:number,ax:number,ay:number,r:number,color:string,trail:Array<{x:number,y:number}>,age:number}>} */
   let planets = [];
@@ -452,7 +452,7 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
     for (const s of stars) {
       const x = s.xNorm * width;
       const y = s.yNorm * height;
-      const tw = 0.35 + 0.4 * Math.sin(starTime * 0.035 + s.twinkle);
+      const tw = 0.35 + 0.4 * Math.sin(animClock * 0.035 + s.twinkle);
       ctx.globalAlpha = tw;
       ctx.beginPath();
       ctx.arc(x, y, s.size, 0, Math.PI * 2);
@@ -471,8 +471,8 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
     // ── 1. Outer corona — wide faint glow, breathing. ──
     // Radius scales with the body so the "gravity reach" visually expands as
     // the sun grows. Colors come from the desktop theme so the sun belongs
-    // to the OS.
-    const breathe = 0.85 + 0.15 * Math.sin(frame * 0.025);
+    // to the OS. Animations use animClock so they pause with timeScale.
+    const breathe = 0.85 + 0.15 * Math.sin(animClock * 0.025);
     const coronaR = r * 6;
     const corona = ctx.createRadialGradient(cx, cy, r * 0.85, cx, cy, coronaR);
     corona.addColorStop(0,   `rgba(${rgb.r},${rgb.g},${rgb.b},${0.32 * breathe})`);
@@ -487,10 +487,10 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
     // The single biggest "this is a sun" cue (kid drawings always have rays).
     // Each ray pulses on its own phase so the sun feels alive, not mechanical.
     const NUM_RAYS = 8;
-    const baseRot = frame * 0.0025;
+    const baseRot = animClock * 0.0025;
     for (let i = 0; i < NUM_RAYS; i++) {
       const a = baseRot + (i / NUM_RAYS) * Math.PI * 2;
-      const phase = (Math.sin(frame * 0.04 + i * 0.83) + 1) * 0.5;
+      const phase = (Math.sin(animClock * 0.04 + i * 0.83) + 1) * 0.5;
       const rayLen = r * (3.0 + phase * 1.6);
       const halfWidth = 0.075;
       const tipX = cx + Math.cos(a) * rayLen;
@@ -531,8 +531,8 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
     ctx.arc(cx, cy, r * 0.98, 0, Math.PI * 2);
     ctx.clip();
     for (let i = 0; i < 3; i++) {
-      const driftAng = frame * 0.009 + i * 2.1;
-      const driftR = r * (0.25 + 0.35 * Math.sin(frame * 0.013 + i * 1.7));
+      const driftAng = animClock * 0.009 + i * 2.1;
+      const driftR = r * (0.25 + 0.35 * Math.sin(animClock * 0.013 + i * 1.7));
       const px = cx + Math.cos(driftAng) * driftR;
       const py = cy + Math.sin(driftAng) * driftR;
       const spotR = r * 0.4;
@@ -715,7 +715,6 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
   function frameLoop() {
     if (disposed) return;
     syncSize();
-    frame++;
 
     // Advance simulation time. timeScale=0 pauses; otherwise we split into
     // substeps small enough to keep velocity-verlet stable at high speed.
@@ -725,9 +724,9 @@ export function createOrbitsGame({ canvas, onPlanetCountChange, onLaunchRejected
       const subDt = advance / substeps;
       for (let i = 0; i < substeps; i++) physicsTick(subDt);
     }
-    // Stars share the simulation clock so they freeze when paused and
-    // shimmer faster when time runs ahead.
-    starTime += timeScale;
+    // Stars and the sun's surface life all share this clock — they freeze
+    // when time is paused and run faster when it's sped up.
+    animClock += timeScale;
 
     ctx.clearRect(0, 0, width, height);
     drawSpaceBackdrop();
