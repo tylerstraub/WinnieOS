@@ -278,13 +278,15 @@ export function createStargazerGame({ canvas, onStatsChange, onConstellationName
     }
 
     function jarPosition() {
-        // Jar sits on the moon, slightly left-of-center, on a small mound.
-        return { x: W * 0.34, y: H * 0.74 };
+        // Centered horizontally so it aligns under the HUD and star arcs into
+        // the sky are visually symmetric.
+        return { x: W * 0.5, y: H * 0.78 };
     }
 
     function jarMouthPosition() {
+        // Where stars appear to "leave" the jar — just above the lid.
         const j = jarPosition();
-        return { x: j.x, y: j.y - H * 0.04 };
+        return { x: j.x, y: j.y - H * 0.07 };
     }
 
     function startNextConstellation() {
@@ -622,53 +624,135 @@ export function createStargazerGame({ canvas, onStatsChange, onConstellationName
 
     function drawJar(now) {
         const j = jarPosition();
-        const jw = Math.min(W, H) * 0.07;
-        const jh = jw * 1.25;
+        const jw = Math.min(W, H) * 0.095;
+        const jh = jw * 1.30;
+        const jx = j.x - jw / 2;
+        const jy = j.y - jh;
+        const r = jw * 0.22;
 
         ctx.save();
 
-        // Soft warm glow around the jar
-        const glow = ctx.createRadialGradient(j.x, j.y - jh * 0.3, jw * 0.2, j.x, j.y - jh * 0.3, jw * 2.4);
-        glow.addColorStop(0,   'rgba(255,220,140,0.35)');
-        glow.addColorStop(0.5, 'rgba(255,200,120,0.12)');
+        // Cast shadow on the moon surface — anchors the jar to its spot so it
+        // doesn't read as a floating sticker on the scene.
+        ctx.fillStyle = 'rgba(40, 36, 52, 0.30)';
+        ctx.beginPath();
+        ctx.ellipse(j.x, j.y + 4, jw * 0.55, jw * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Warm amber glow radiating from the jar — generous so the jar reads
+        // as a light source, not just an object.
+        const glowCenter = { x: j.x, y: j.y - jh * 0.45 };
+        const glow = ctx.createRadialGradient(
+            glowCenter.x, glowCenter.y, jw * 0.2,
+            glowCenter.x, glowCenter.y, jw * 3.0
+        );
+        glow.addColorStop(0,   'rgba(255,220,140,0.55)');
+        glow.addColorStop(0.4, 'rgba(255,200,120,0.22)');
         glow.addColorStop(1,   'rgba(255,200,120,0)');
         ctx.fillStyle = glow;
         ctx.beginPath();
-        ctx.arc(j.x, j.y - jh * 0.3, jw * 2.4, 0, Math.PI * 2);
+        ctx.arc(glowCenter.x, glowCenter.y, jw * 3.0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Jar body — rounded glass shape
-        ctx.fillStyle = 'rgba(160,180,210,0.20)';
-        ctx.strokeStyle = 'rgba(220,230,250,0.65)';
-        ctx.lineWidth = 1.4;
-        const jx = j.x - jw / 2;
-        const jy = j.y - jh;
-        const r = jw * 0.18;
+        // ── Glass body ────────────────────────────────────────────────────
+        // Dark blue-tinted glass: strong enough alpha to read against the
+        // cream moon surface, with a vertical gradient so the bottom reads
+        // heavier (where the "weight" of the stars would settle).
+        const bodyGrad = ctx.createLinearGradient(0, jy, 0, jy + jh);
+        bodyGrad.addColorStop(0,    'rgba(30, 38, 70, 0.48)');
+        bodyGrad.addColorStop(0.55, 'rgba(36, 44, 80, 0.62)');
+        bodyGrad.addColorStop(1,    'rgba(20, 26, 56, 0.78)');
+        ctx.fillStyle = bodyGrad;
         roundRect(ctx, jx, jy, jw, jh, r);
         ctx.fill();
+
+        // Warm inner glow showing through the glass from the stars inside.
+        ctx.save();
+        roundRect(ctx, jx, jy, jw, jh, r);
+        ctx.clip();
+        const innerGlow = ctx.createRadialGradient(
+            j.x, j.y - jh * 0.40, jw * 0.05,
+            j.x, j.y - jh * 0.40, jw * 0.95
+        );
+        innerGlow.addColorStop(0,   'rgba(255, 225, 150, 0.65)');
+        innerGlow.addColorStop(0.6, 'rgba(255, 200, 120, 0.18)');
+        innerGlow.addColorStop(1,   'rgba(255, 200, 120, 0)');
+        ctx.fillStyle = innerGlow;
+        ctx.fillRect(jx, jy, jw, jh);
+        ctx.restore();
+
+        // Glass edge — outline + bright highlight on the left curve to suggest
+        // a curved glass surface catching the ambient light.
+        ctx.strokeStyle = 'rgba(180, 200, 230, 0.50)';
+        ctx.lineWidth = 1.6;
+        roundRect(ctx, jx, jy, jw, jh, r);
         ctx.stroke();
 
-        // Jar lid
-        const lidH = jh * 0.12;
-        ctx.fillStyle = 'rgba(220,200,150,0.55)';
-        ctx.strokeStyle = 'rgba(180,160,110,0.75)';
-        roundRect(ctx, jx - 2, jy - lidH, jw + 4, lidH * 1.3, r * 0.4);
+        ctx.strokeStyle = 'rgba(255, 250, 230, 0.55)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(jx + 2, jy + r);
+        ctx.quadraticCurveTo(jx + 2, jy + jh * 0.35, jx + jw * 0.10, jy + jh * 0.55);
+        ctx.stroke();
+
+        // ── Brass lid ─────────────────────────────────────────────────────
+        const lidH = jh * 0.16;
+        const lidOverhang = 4;
+        const lidGrad = ctx.createLinearGradient(0, jy - lidH, 0, jy + lidH * 0.3);
+        lidGrad.addColorStop(0,   '#e8c66e');
+        lidGrad.addColorStop(0.5, '#c79a3a');
+        lidGrad.addColorStop(1,   '#8a661f');
+        ctx.fillStyle = lidGrad;
+        ctx.strokeStyle = 'rgba(70, 50, 20, 0.65)';
+        ctx.lineWidth = 1.2;
+        roundRect(ctx, jx - lidOverhang, jy - lidH, jw + lidOverhang * 2, lidH * 1.25, r * 0.45);
         ctx.fill();
         ctx.stroke();
 
-        // Tiny twinkling stars inside the jar (the "supply")
-        const inside = 5;
+        // Lid highlight (catches the warm glow)
+        ctx.fillStyle = 'rgba(255, 245, 210, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(j.x - jw * 0.18, jy - lidH * 0.35, jw * 0.22, lidH * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tiny knob on the lid
+        ctx.fillStyle = '#a87c2c';
+        ctx.strokeStyle = 'rgba(50, 32, 8, 0.6)';
+        ctx.beginPath();
+        ctx.arc(j.x, jy - lidH * 0.95, jw * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // ── Stars inside the jar ──────────────────────────────────────────
+        // Brighter and slightly larger than before — they're the "supply"
+        // Winnie is going to release, so they need to read clearly through
+        // the glass. Movement is a gentle drift, not a fast spin.
+        ctx.save();
+        roundRect(ctx, jx + 2, jy + 2, jw - 4, jh - 4, r - 1);
+        ctx.clip();
+        const inside = 7;
         for (let i = 0; i < inside; i++) {
-            const ang = (i / inside) * Math.PI * 2 + now * 0.0006;
-            const rad = jw * 0.18 + (i % 2) * jw * 0.10;
+            const ang = (i / inside) * Math.PI * 2 + now * 0.00045;
+            const rad = jw * 0.22 + (i % 3) * jw * 0.08;
             const sx = j.x + Math.cos(ang) * rad;
-            const sy = j.y - jh * 0.45 + Math.sin(ang) * rad * 0.7;
-            const tw = 0.5 + 0.5 * Math.sin(now * 0.003 + i);
-            ctx.fillStyle = `rgba(255,240,180,${0.6 + 0.4 * tw})`;
+            const sy = j.y - jh * 0.45 + Math.sin(ang) * rad * 0.55;
+            const tw = 0.5 + 0.5 * Math.sin(now * 0.0028 + i * 1.7);
+            const r2 = 1.6 + tw * 1.0;
+            // Halo
+            const h = ctx.createRadialGradient(sx, sy, 0, sx, sy, r2 * 3);
+            h.addColorStop(0,   `rgba(255, 240, 180, ${0.85 * (0.5 + 0.5 * tw)})`);
+            h.addColorStop(1,   'rgba(255, 240, 180, 0)');
+            ctx.fillStyle = h;
             ctx.beginPath();
-            ctx.arc(sx, sy, 1.4 + tw * 0.6, 0, Math.PI * 2);
+            ctx.arc(sx, sy, r2 * 3, 0, Math.PI * 2);
+            ctx.fill();
+            // Core
+            ctx.fillStyle = `rgba(255, 250, 220, ${0.85 + 0.15 * tw})`;
+            ctx.beginPath();
+            ctx.arc(sx, sy, r2, 0, Math.PI * 2);
             ctx.fill();
         }
+        ctx.restore();
 
         ctx.restore();
     }
