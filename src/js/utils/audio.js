@@ -52,6 +52,12 @@ const MIN_INTERVAL = {
     absorb: 0.12,
     vanish: 0.12,
     deny: 0.20,
+    // Stargazer vocabulary (moon / constellations / countdown).
+    jarLift: 0.05,
+    starPlace: 0.05,
+    constellationReveal: 1.5,
+    constellationName: 1.5,
+    shootingStar: 0.15,
 };
 
 function now() {
@@ -1342,6 +1348,189 @@ function playStar(strength = 0.9) {
     });
 }
 
+// ── Stargazer audio vocabulary ────────────────────────────────────────────
+// A small pentatonic ladder so consecutive star placements feel musical
+// rather than random. Index = star position in the constellation sequence
+// (0 = first star placed). High enough numbers wrap upward gracefully.
+const STARGAZER_SCALE_HZ = [
+    523.25,   // C5
+    587.33,   // D5
+    659.25,   // E5
+    783.99,   // G5
+    880.00,   // A5
+    1046.50,  // C6
+    1174.66,  // D6
+    1318.51,  // E6
+    1567.98,  // G6
+    1760.00,  // A6
+];
+
+/** Star lifts out of the jar — soft pluck with a tiny upward chirp. */
+function playJarLift(strength = 0.5) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('jarLift')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(2200, t);
+
+    o.type = 'triangle';
+    const base = 320 + 80 * s;
+    o.frequency.setValueAtTime(base, t);
+    o.frequency.exponentialRampToValueAtTime(base * 1.4, t + 0.08);
+
+    envGain(g, t, 0.002, 0.12, 0.045 * (0.55 + 0.45 * s), 0.00001);
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    o.start(t);
+    o.stop(t + 0.16);
+}
+
+/**
+ * Star locks into the sky — pitched chime, position-aware so consecutive
+ * placements ascend the pentatonic. `n` is the star's index in the sequence
+ * (0 = first placed). The melody resets per constellation, so every reveal
+ * has the same signature shape no matter the length.
+ */
+function playStarPlace(strength = 0.7, n = 0) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('starPlace')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const idx = Math.max(0, Math.min(STARGAZER_SCALE_HZ.length - 1, n | 0));
+    const freq = STARGAZER_SCALE_HZ[idx];
+
+    // Bell-like: two sines an octave apart, the upper one quieter and detuned
+    // a touch for shimmer. Short, sweet, non-musical-on-purpose so back-to-back
+    // chimes don't feel like a tune you can finish in your head.
+    const o1 = c.createOscillator();
+    const o2 = c.createOscillator();
+    const g1 = c.createGain();
+    const g2 = c.createGain();
+
+    o1.type = 'sine';
+    o2.type = 'sine';
+    o1.frequency.setValueAtTime(freq, t);
+    o2.frequency.setValueAtTime(freq * 2.005, t);
+
+    envGain(g1, t, 0.002, 0.45, 0.090 * (0.55 + 0.45 * s), 0.00001);
+    envGain(g2, t, 0.003, 0.40, 0.038 * (0.55 + 0.45 * s), 0.00001);
+
+    o1.connect(g1); g1.connect(master);
+    o2.connect(g2); g2.connect(master);
+
+    o1.start(t); o2.start(t);
+    o1.stop(t + 0.55); o2.stop(t + 0.50);
+
+    // Soft sparkle whisper to give the placement an "in the air" quality.
+    playNoiseBurst(t + 0.005, 0.10, {
+        gainPeak: 0.004 + 0.006 * s,
+        bpHz: 5200,
+        bpQ: 0.9,
+    });
+}
+
+/** Connecting-lines flourish — an ascending pentatonic arpeggio. */
+function playConstellationReveal(strength = 0.8) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('constellationReveal')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5 E5 G5 C6 E6
+    const spacing = 0.085;
+
+    for (let i = 0; i < notes.length; i++) {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        const lp = c.createBiquadFilter();
+        lp.type = 'lowpass';
+        const start = t + i * spacing;
+        lp.frequency.setValueAtTime(3500, start);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(notes[i], start);
+        envGain(g, start, 0.003, 0.55, 0.072 * (0.55 + 0.45 * s), 0.00001);
+        o.connect(lp); lp.connect(g); g.connect(master);
+        o.start(start);
+        o.stop(start + 0.65);
+    }
+
+    // A whoosh underneath so it feels like the sky itself catches its breath.
+    playNoiseBurst(t, 0.55, {
+        gainPeak: 0.008 + 0.010 * s,
+        bpHz: 1600,
+        bpQ: 0.5,
+    });
+}
+
+/** "The X" — soft, resolved perfect-fifth shimmer that lands the naming beat. */
+function playConstellationName(strength = 0.7) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('constellationName')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    // C6 + G6 — a perfect fifth, sustained gently.
+    const freqs = [1046.50, 1567.98];
+    for (let i = 0; i < freqs.length; i++) {
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(freqs[i], t);
+        envGain(g, t, 0.008, 0.85, 0.060 * (0.55 + 0.45 * s), 0.00001);
+        o.connect(g); g.connect(master);
+        o.start(t);
+        o.stop(t + 0.95);
+    }
+}
+
+/** Wrong-digit flavor — a brief airy whoosh, no penalty feeling. */
+function playShootingStar(strength = 0.4) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('shootingStar')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    const o = c.createOscillator();
+    const g = c.createGain();
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.6;
+    bp.frequency.setValueAtTime(1800, t);
+    bp.frequency.exponentialRampToValueAtTime(800, t + 0.30);
+
+    o.type = 'sine';
+    const base = 1200 + 240 * s;
+    o.frequency.setValueAtTime(base, t);
+    o.frequency.exponentialRampToValueAtTime(base * 0.55, t + 0.30);
+
+    envGain(g, t, 0.005, 0.30, 0.030 * (0.55 + 0.45 * s), 0.00001);
+    o.connect(bp); bp.connect(g); g.connect(master);
+    o.start(t);
+    o.stop(t + 0.34);
+
+    playNoiseBurst(t, 0.28, {
+        gainPeak: 0.005 + 0.006 * s,
+        bpHz: 2400,
+        bpQ: 0.5,
+    });
+}
+
 export const Audio = {
     ensure: function() {
         return !!ensureContext();
@@ -1440,6 +1629,12 @@ export const Audio = {
     absorb:      function(strength) { playAbsorb(strength); },
     vanish:      function(strength) { playVanish(strength); },
     deny:        function(strength) { playDeny(strength); },
+    // Stargazer sound vocabulary
+    jarLift:               function(strength)   { playJarLift(strength); },
+    starPlace:             function(strength, n){ playStarPlace(strength, n); },
+    constellationReveal:   function(strength)   { playConstellationReveal(strength); },
+    constellationName:     function(strength)   { playConstellationName(strength); },
+    shootingStar:          function(strength)   { playShootingStar(strength); },
 };
 
 // Attach to window namespace for shared reuse
