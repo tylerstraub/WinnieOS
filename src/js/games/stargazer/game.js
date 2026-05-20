@@ -206,13 +206,30 @@ export function createStargazerGame({ canvas, onStatsChange, onConstellationName
     }
 
     // ── Moon surface craters (baked once so they don't dance every frame) ──
+    // Reserve a clear "stage" around the jar so craters never crowd or visually
+    // overlap it. The jar's footprint (including shadow + halo) occupies a
+    // vertical strip in the lower-center of the moon surface; reject any
+    // crater whose CENTER lands there and re-roll (with a few tries cap).
     const craters = [];
     {
         const cnt = 7;
+        const JAR_GUARD_X = 0.14;           // half-width of no-spawn band
+        const JAR_GUARD_Y_MIN = 0.60;
+        const JAR_GUARD_Y_MAX = 0.86;
+        const inJarStage = (xN, yN) =>
+            Math.abs(xN - 0.5) < JAR_GUARD_X &&
+            yN > JAR_GUARD_Y_MIN && yN < JAR_GUARD_Y_MAX;
+
         for (let i = 0; i < cnt; i++) {
+            let xN, yN;
+            let tries = 0;
+            do {
+                xN = 0.05 + Math.random() * 0.9;
+                yN = 0.62 + Math.random() * 0.32;
+                tries++;
+            } while (inJarStage(xN, yN) && tries < 20);
             craters.push({
-                xN: 0.05 + Math.random() * 0.9,
-                yN: 0.62 + Math.random() * 0.32,
+                xN, yN,
                 rN: 0.018 + Math.random() * 0.045,
                 tilt: (Math.random() - 0.5) * 0.5,
                 squash: 0.5 + Math.random() * 0.3,
