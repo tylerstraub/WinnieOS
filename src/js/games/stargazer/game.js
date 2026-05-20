@@ -155,6 +155,26 @@ function deriveSkyPalette(primaryHex) {
     };
 }
 
+function deriveEarthPalette(primaryHex) {
+    const rgb = Background.hexToRgb(primaryHex);
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    const h = hsl.h;
+    const s = Math.max(0.55, Math.min(0.85, hsl.s));
+    // Body: lit-from-upper-left sphere, primary hue throughout. Highlight is
+    // pale, rim is rich and deep so the disc reads as a ball, not a flat coin.
+    // Landmass uses a +150° hue rotation so it always contrasts the body,
+    // regardless of which color Winnie picked.
+    const landH = (h + 150) % 360;
+    const land = hslToRgb(landH, 0.55, 0.55);
+    return {
+        bodyHighlight: hslToCss(h, s * 0.85, 0.82),
+        bodyMid:       hslToCss(h, s,        0.58),
+        bodyRim:       hslToCss(h, s,        0.28),
+        haloRgb:       rgb,
+        landRgb:       land,
+    };
+}
+
 /**
  * @param {{
  *   canvas: HTMLCanvasElement,
@@ -175,11 +195,12 @@ export function createStargazerGame({ canvas, onStatsChange, onConstellationName
         H = canvas.height;
     }
 
-    // ── Theme — derived from the desktop primary so the sky belongs to the
-    // rest of the OS visually. Sampled once at start (the desktop color is
-    // unlikely to change while she's playing).
+    // ── Theme — derived from the desktop primary so the sky and Earth belong
+    // to the rest of the OS visually. Sampled once at start (the desktop color
+    // is unlikely to change while she's playing).
     const primaryHex = Background.getSaved() || '#667eea';
     const skyPalette = deriveSkyPalette(primaryHex);
+    const earthPalette = deriveEarthPalette(primaryHex);
 
     // ── Persistent state ──────────────────────────────────────────────────
     let totalStars = Number(Storage.get(STORAGE_KEY_STARS, 0)) || 0;
@@ -539,35 +560,36 @@ export function createStargazerGame({ canvas, onStatsChange, onConstellationName
         const ex = W * 0.76;
         const ey = H * 0.20;
         const er = Math.min(W, H) * 0.068;
+        const { bodyHighlight, bodyMid, bodyRim, haloRgb, landRgb } = earthPalette;
 
         ctx.save();
-        // Soft halo
+        // Soft halo — primary-tinted so Earth bleeds the OS color into the sky.
         const halo = ctx.createRadialGradient(ex, ey, er * 0.6, ex, ey, er * 2.6);
-        halo.addColorStop(0,    'rgba(120,180,240,0.22)');
-        halo.addColorStop(0.5,  'rgba(120,180,240,0.08)');
-        halo.addColorStop(1,    'rgba(120,180,240,0)');
+        halo.addColorStop(0,   `rgba(${haloRgb.r},${haloRgb.g},${haloRgb.b},0.22)`);
+        halo.addColorStop(0.5, `rgba(${haloRgb.r},${haloRgb.g},${haloRgb.b},0.08)`);
+        halo.addColorStop(1,   `rgba(${haloRgb.r},${haloRgb.g},${haloRgb.b},0)`);
         ctx.fillStyle = halo;
         ctx.beginPath();
         ctx.arc(ex, ey, er * 2.6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Earth body — gradient blue-green
+        // Earth body — lit-from-upper-left sphere in the primary's hue family.
         const body = ctx.createRadialGradient(ex - er * 0.35, ey - er * 0.35, er * 0.2, ex, ey, er);
-        body.addColorStop(0,   '#a8d4f0');
-        body.addColorStop(0.5, '#5d9fd4');
-        body.addColorStop(1,   '#1d4a78');
+        body.addColorStop(0,   bodyHighlight);
+        body.addColorStop(0.5, bodyMid);
+        body.addColorStop(1,   bodyRim);
         ctx.fillStyle = body;
         ctx.beginPath();
         ctx.arc(ex, ey, er, 0, Math.PI * 2);
         ctx.fill();
 
-        // Subtle landmass swirls — quick painterly suggestion. Clipped to the
-        // Earth disc so the strokes never leak past the sphere edge.
+        // Landmass swirls — complementary hue at low alpha, clipped to the
+        // disc so strokes never leak past the sphere edge.
         ctx.save();
         ctx.beginPath();
         ctx.arc(ex, ey, er, 0, Math.PI * 2);
         ctx.clip();
-        ctx.fillStyle = 'rgba(120,180,90,0.32)';
+        ctx.fillStyle = `rgba(${landRgb.r},${landRgb.g},${landRgb.b},0.34)`;
         ctx.beginPath();
         ctx.ellipse(ex - er * 0.2, ey + er * 0.15, er * 0.45, er * 0.18, 0.4, 0, Math.PI * 2);
         ctx.fill();
