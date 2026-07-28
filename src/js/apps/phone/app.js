@@ -1,44 +1,28 @@
 /**
- * Pretend Phone
+ * Phone
  *
- * A deliberately local toy phone: digits make familiar keypad tones, the call
- * button rings a whimsical pretend caller, and nothing ever leaves the browser.
+ * A deliberately local toy phone. Presentation lives here; call resolution is
+ * delegated to a replaceable provider, while microphone analysis and bounded
+ * call memories stay in focused local-only adapters.
  */
 
 import { Audio } from '../../utils/audio.js';
+import {
+    FAMILY_CONTACTS,
+    PRETEND_CALLERS,
+    choosePretendCaller,
+    createPretendCallProvider
+} from './pretend-call-provider.js';
+import { createLocalCallMicrophone } from './local-call-microphone.js';
+import {
+    createCallMemoryCapture,
+    createCallMemoryStore
+} from './call-memory-store.js';
 
 const MAX_DIGITS = 10;
-const RING_DELAY_MS = 1450;
+const CONNECTED_STATES = new Set(['family-connected', 'silly-connected']);
 
-export const FAMILY_CONTACTS = {
-    mom: {
-        id: 'mom',
-        name: 'Mom',
-        emoji: '👩',
-        color: 'coral'
-    },
-    dad: {
-        id: 'dad',
-        name: 'Dad',
-        emoji: '👨',
-        color: 'blue'
-    }
-};
-
-export const PRETEND_CALLERS = [
-    { emoji: '🍌', name: 'Banana Phone', message: 'Ring ring, peel-o!' },
-    { emoji: '🐭🌙', name: 'Moon Mice', message: 'Squeak squeak! Tiny hello!' },
-    { emoji: '🧦', name: 'Silly Socks', message: 'They found the other sock!' },
-    { emoji: '🦆', name: 'Dancing Ducks', message: 'Quack quack — dance break!' },
-    { emoji: '☁️', name: 'A Fluffy Cloud', message: 'The cloud says booooop!' },
-    { emoji: '🤖', name: 'Beep-Boop Robot', message: 'Beep boop! You found me!' },
-    { emoji: '🦕', name: 'Dinosaur Friend', message: 'Roooar means hello!' },
-    { emoji: '🍕', name: 'Pizza Planet', message: 'Extra giggles delivered!' },
-    { emoji: '🐸', name: 'The Frog Pond', message: 'Ribbit ribbit, Winnie!' },
-    { emoji: '🐱🚀', name: 'Captain Whiskers', message: 'Floating through space!' },
-    { emoji: '🫧', name: 'Bubble Club', message: 'Pop pop, hooray!' },
-    { emoji: '🐙', name: 'Octopus Office', message: 'Eight hands are waving!' }
-];
+export { FAMILY_CONTACTS, PRETEND_CALLERS, choosePretendCaller };
 
 export function formatPhoneNumber(value) {
     const digits = String(value || '').replace(/\D/g, '').slice(0, MAX_DIGITS);
@@ -48,20 +32,10 @@ export function formatPhoneNumber(value) {
     return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
 }
 
-export function choosePretendCaller(digits, previousIndex = -1, randomValue = Math.random()) {
-    const digitScore = String(digits || '')
-        .split('')
-        .reduce((sum, digit, index) => sum + Number(digit) * (index + 3), 0);
-    const randomScore = Math.floor(
-        Math.max(0, Math.min(0.999999, randomValue)) * PRETEND_CALLERS.length
-    );
-    let index = (digitScore + randomScore) % PRETEND_CALLERS.length;
-
-    if (PRETEND_CALLERS.length > 1 && index === previousIndex) {
-        index = (index + 1) % PRETEND_CALLERS.length;
-    }
-
-    return { index, caller: PRETEND_CALLERS[index] };
+function renderWaveBars() {
+    return Array.from({ length: 9 }, (_, index) => (
+        `<span class="wos-phone-wave-bar" data-wave-bar="${index}"></span>`
+    )).join('');
 }
 
 export default {
@@ -70,10 +44,15 @@ export default {
     iconEmoji: '☎️',
     sortOrder: 0,
 
-    mount: function ({ root }) {
+    mount: function ({ root, phoneServices = {} }) {
         if (!root) return;
 
         try { Audio.ensure(); } catch (_) { /* audio is optional */ }
+
+        const callProvider = phoneServices.callProvider || createPretendCallProvider();
+        const microphone = phoneServices.microphone || createLocalCallMicrophone();
+        const memoryStore = phoneServices.memoryStore || createCallMemoryStore();
+        const makeCapture = phoneServices.createCallMemoryCapture || createCallMemoryCapture;
 
         root.className = 'wos-phone-app';
         root.innerHTML = `
@@ -106,7 +85,23 @@ export default {
                         <div class="wos-phone-character-emoji" aria-hidden="true">☎️</div>
                         <div class="wos-phone-character-name">Who should we call?</div>
                         <div class="wos-phone-character-message">Every number is a silly surprise.</div>
+                        <div class="wos-phone-call-signal" data-call-signal="off"
+                            role="status" aria-label="Call status">
+                            <div class="wos-phone-call-signal-heading">
+                                <span class="wos-phone-call-dot" aria-hidden="true"></span>
+                                <span class="wos-phone-call-label">Call connected</span>
+                            </div>
+                            <div class="wos-phone-wave" aria-hidden="true">
+                                ${renderWaveBars()}
+                            </div>
+                            <button class="wos-phone-mic-retry" type="button"
+                                data-action="microphone" hidden>Try talk &amp; listen</button>
+                        </div>
                     </div>
+                    <section class="wos-phone-recents" aria-label="Recent call memories" hidden>
+                        <div class="wos-phone-recents-title">Recent hellos</div>
+                        <div class="wos-phone-recents-list"></div>
+                    </section>
                 </div>
                 <div class="wos-phone-keypad" role="group" aria-label="Phone keypad">
                     ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => `
@@ -136,17 +131,24 @@ export default {
         const characterEmoji = root.querySelector('.wos-phone-character-emoji');
         const characterName = root.querySelector('.wos-phone-character-name');
         const characterMessage = root.querySelector('.wos-phone-character-message');
+        const callSignal = root.querySelector('.wos-phone-call-signal');
+        const callLabel = root.querySelector('.wos-phone-call-label');
+        const waveBars = Array.from(root.querySelectorAll('[data-wave-bar]'));
+        const microphoneButton = root.querySelector('[data-action="microphone"]');
         const callButton = root.querySelector('[data-action="call"]');
         const clearButton = root.querySelector('[data-action="clear"]');
         const soundButton = root.querySelector('[data-action="sound"]');
         const favoriteButtons = Array.from(root.querySelectorAll('[data-contact]'));
+        const recents = root.querySelector('.wos-phone-recents');
+        const recentsList = root.querySelector('.wos-phone-recents-list');
 
         let digits = '';
         let state = 'dialing';
         let soundEnabled = true;
-        let ringTimer = null;
-        let previousCallerIndex = -1;
         let activeContactId = null;
+        let activeCall = null;
+        let activeCapture = null;
+        let microphoneRequestId = 0;
         let mounted = true;
 
         function playSound(play) {
@@ -164,13 +166,6 @@ export default {
             } catch (_) { /* keep the phone fully usable without sound */ }
         }
 
-        function clearRingTimer() {
-            if (ringTimer) {
-                clearTimeout(ringTimer);
-                ringTimer = null;
-            }
-        }
-
         function setCallButton(isHangingUp) {
             callButton.classList.toggle('wos-phone-key--hangup', isHangingUp);
             callButton.setAttribute('aria-label', isHangingUp ? 'Say bye' : 'Call');
@@ -186,6 +181,30 @@ export default {
             });
         }
 
+        function setCallSignal(signalState, label) {
+            callSignal.dataset.callSignal = signalState;
+            callLabel.textContent = label;
+            microphoneButton.hidden = signalState !== 'connected-fallback';
+            callSignal.setAttribute('aria-label', label);
+            if (signalState !== 'connected-live') {
+                waveBars.forEach((bar, index) => {
+                    const resting = 0.24 + (index % 3) * 0.09;
+                    bar.style.setProperty('--wave-level', String(resting));
+                });
+            }
+        }
+
+        function updateWave(level) {
+            if (!CONNECTED_STATES.has(state)) return;
+            setCallSignal('connected-live', 'Call connected — your voice is making waves!');
+            waveBars.forEach((bar, index) => {
+                const center = 1 - Math.abs(index - 4) / 5;
+                const ripple = 0.72 + 0.28 * Math.sin(index * 1.7 + level * 8);
+                const height = Math.max(0.18, Math.min(1, 0.18 + level * center * ripple));
+                bar.style.setProperty('--wave-level', height.toFixed(3));
+            });
+        }
+
         function updateNumber() {
             const formatted = formatPhoneNumber(digits);
             numberValue.textContent = formatted;
@@ -194,9 +213,60 @@ export default {
             clearButton.disabled = !digits && state === 'dialing';
         }
 
+        async function refreshRecents() {
+            const records = await memoryStore.list();
+            if (!mounted) return;
+
+            recentsList.replaceChildren();
+            recents.hidden = records.length === 0;
+            records.forEach((record, index) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'wos-phone-recent';
+                button.dataset.memoryId = record.id;
+                button.setAttribute('aria-label', `Replay recent hello from ${record.callerName}`);
+
+                const emoji = document.createElement('span');
+                emoji.className = 'wos-phone-recent-emoji';
+                emoji.setAttribute('aria-hidden', 'true');
+                emoji.textContent = record.callerEmoji;
+
+                const label = document.createElement('span');
+                label.className = 'wos-phone-recent-label';
+                label.textContent = index === 0 ? 'Latest hello' : 'Hello again';
+
+                const replay = document.createElement('span');
+                replay.className = 'wos-phone-recent-play';
+                replay.setAttribute('aria-hidden', 'true');
+                replay.textContent = '▶';
+
+                button.append(emoji, label, replay);
+                recentsList.appendChild(button);
+            });
+        }
+
+        function finishActiveCapture({ save = true } = {}) {
+            const capture = activeCapture;
+            activeCapture = null;
+            if (!capture) return;
+            if (!save) {
+                capture.cancel();
+                return;
+            }
+            capture.finish()
+                .then(() => refreshRecents())
+                .catch(() => {});
+        }
+
+        function stopConnectedMedia({ saveMemory = true } = {}) {
+            microphoneRequestId += 1;
+            finishActiveCapture({ save: saveMemory });
+            try { microphone.stop(); } catch (_) { /* microphone is optional */ }
+        }
+
         function showDialing() {
             state = 'dialing';
-            clearRingTimer();
+            activeCall = null;
             setActiveContact(null);
             toy.dataset.state = state;
             characterEmoji.textContent = '☎️';
@@ -204,6 +274,7 @@ export default {
             characterMessage.textContent = digits
                 ? 'Add more, or tap the green phone.'
                 : 'Every number is a silly surprise.';
+            setCallSignal('off', 'Phone ready');
             setCallButton(false);
             updateNumber();
         }
@@ -214,54 +285,104 @@ export default {
             character.classList.add('wos-phone-character--arriving');
         }
 
-        function showSillyCaller(caller) {
-            state = 'silly-connected';
-            toy.dataset.state = state;
-            animateCharacterArrival();
-            characterEmoji.textContent = caller.emoji;
-            characterName.textContent = caller.name;
-            characterMessage.textContent = caller.message;
-            numberHint.hidden = true;
-            setCallButton(true);
-            playSound(() => Audio.phoneAnswer(0.52));
+        async function activateConnectedMicrophone(call) {
+            if (!mounted || activeCall !== call || !CONNECTED_STATES.has(state)) return;
+            if (activeCapture) {
+                activeCapture.cancel();
+                activeCapture = null;
+            }
+            const requestId = ++microphoneRequestId;
+            setCallSignal('connected-starting', 'Call connected — listening for your voice…');
+
+            let result;
+            try {
+                result = await microphone.start({ onLevel: updateWave });
+            } catch (_) {
+                result = { ok: false, reason: 'unavailable' };
+            }
+
+            if (
+                !mounted ||
+                requestId !== microphoneRequestId ||
+                activeCall !== call ||
+                !CONNECTED_STATES.has(state)
+            ) {
+                try { microphone.stop(); } catch (_) { /* optional cleanup */ }
+                return;
+            }
+
+            if (!result.ok) {
+                setCallSignal(
+                    'connected-fallback',
+                    'Call connected — keep talking and pretending!'
+                );
+                return;
+            }
+
+            setCallSignal(
+                result.visualization ? 'connected-live' : 'connected-quiet',
+                result.visualization
+                    ? 'Call connected — talk to make waves!'
+                    : 'Call connected — keep talking and pretending!'
+            );
+
+            activeCapture = makeCapture({
+                stream: result.stream,
+                call,
+                store: memoryStore
+            });
         }
 
-        function showFamilyCall(contact) {
-            state = 'family-connected';
+        function showConnected(call) {
+            activeCall = call;
+            state = call.party.kind === 'family' ? 'family-connected' : 'silly-connected';
             toy.dataset.state = state;
             animateCharacterArrival();
-            setActiveContact(contact.id);
-            characterEmoji.textContent = contact.emoji;
-            characterName.textContent = `${contact.name} is on the line!`;
-            characterMessage.textContent = 'Talk, sing, or tell a story. They’re listening.';
+            setActiveContact(call.party.kind === 'family' ? call.party.id : null);
+            characterEmoji.textContent = call.party.emoji;
+            characterName.textContent = call.party.kind === 'family'
+                ? `${call.party.name} is on the line!`
+                : call.party.name;
+            characterMessage.textContent = call.party.message;
             numberHint.textContent = 'On the line';
             numberHint.hidden = false;
             setCallButton(true);
-            playSound(() => Audio.phoneAnswer(0.42));
+            setCallSignal('connected-starting', 'Call connected — listening for your voice…');
+            playSound(() => Audio.phoneAnswer(call.party.kind === 'family' ? 0.54 : 0.62));
+            activateConnectedMicrophone(call);
         }
 
-        function beginRinging({ contact = null, caller = null }) {
-            clearRingTimer();
+        function showRinging(call) {
+            activeCall = call;
             state = 'ringing';
             toy.dataset.state = state;
-            setActiveContact(contact ? contact.id : null);
-            numberValue.textContent = contact ? contact.name : formatPhoneNumber(digits);
+            setActiveContact(call.party.kind === 'family' ? call.party.id : null);
+            numberValue.textContent = call.party.kind === 'family'
+                ? call.party.name
+                : formatPhoneNumber(call.digits);
             numberHint.textContent = 'Calling…';
             numberHint.hidden = false;
-            characterEmoji.textContent = contact ? contact.emoji : '📞';
-            characterName.textContent = contact ? `Calling ${contact.name}…` : 'Ring ring…';
-            characterMessage.textContent = contact
+            characterEmoji.textContent = call.party.kind === 'family' ? call.party.emoji : '📞';
+            characterName.textContent = call.party.kind === 'family'
+                ? `Calling ${call.party.name}…`
+                : 'Ring ring…';
+            characterMessage.textContent = call.party.kind === 'family'
                 ? 'They’ll be on the line in a moment.'
                 : 'A silly friend is answering!';
+            setCallSignal('ringing', 'Ringing…');
             setCallButton(true);
-            playSound(() => Audio.phoneRing(0.44));
+            playSound(() => Audio.phoneRing(0.56));
+        }
 
-            ringTimer = setTimeout(() => {
-                ringTimer = null;
-                if (!mounted || state !== 'ringing') return;
-                if (contact) showFamilyCall(contact);
-                else showSillyCaller(caller);
-            }, RING_DELAY_MS);
+        function dial({ contactId = null } = {}) {
+            if (contactId) digits = '';
+            callProvider.dial(
+                { digits, contactId },
+                {
+                    onRinging: showRinging,
+                    onConnected: showConnected
+                }
+            );
         }
 
         function startPretendCall() {
@@ -275,21 +396,20 @@ export default {
                 playSound(() => Audio.tick());
                 return;
             }
-
-            const result = choosePretendCaller(digits, previousCallerIndex);
-            previousCallerIndex = result.index;
-            beginRinging({ caller: result.caller });
+            dial();
         }
 
         function startFamilyCall(contactId) {
-            const contact = FAMILY_CONTACTS[contactId];
-            if (!contact) return;
-            digits = '';
-            beginRinging({ contact });
+            if (!FAMILY_CONTACTS[contactId]) return;
+            if (state !== 'dialing') sayBye({ withSound: false });
+            dial({ contactId });
         }
 
         function sayBye({ withSound = true } = {}) {
-            if (withSound) playSound(() => Audio.phoneHangup(0.36));
+            const saveMemory = CONNECTED_STATES.has(state);
+            callProvider.disconnect();
+            stopConnectedMedia({ saveMemory });
+            if (withSound) playSound(() => Audio.phoneHangup(0.46));
             digits = '';
             character.classList.remove('wos-phone-character--arriving');
             showDialing();
@@ -309,7 +429,7 @@ export default {
                 ? 'That number is ready to ring.'
                 : 'Every tap makes a phone tone.';
             updateNumber();
-            playSound(() => Audio.phoneDigit(String(digit), 0.36));
+            playSound(() => Audio.phoneDigit(String(digit), 0.46));
         }
 
         function eraseDigit() {
@@ -323,6 +443,21 @@ export default {
             showDialing();
         }
 
+        async function replayMemory(id, button) {
+            const record = await memoryStore.get(id);
+            if (!mounted || !record?.blob) return;
+            button.classList.add('is-playing');
+            try {
+                if (Audio.playLocalRecording) {
+                    await Audio.playLocalRecording(record.blob, 0.46);
+                }
+            } catch (_) {
+                // Replay is optional; stored memories never affect normal calls.
+            } finally {
+                if (mounted) button.classList.remove('is-playing');
+            }
+        }
+
         function onRootClick(event) {
             const button = event.target.closest('button');
             if (!button || !root.contains(button)) return;
@@ -331,11 +466,15 @@ export default {
                 pressDigit(button.dataset.digit);
             } else if (button.dataset.contact) {
                 startFamilyCall(button.dataset.contact);
+            } else if (button.dataset.memoryId) {
+                replayMemory(button.dataset.memoryId, button);
             } else if (button.dataset.action === 'clear') {
                 eraseDigit();
             } else if (button.dataset.action === 'call') {
                 if (state === 'dialing') startPretendCall();
                 else sayBye();
+            } else if (button.dataset.action === 'microphone' && activeCall) {
+                activateConnectedMicrophone(activeCall);
             } else if (button.dataset.action === 'sound') {
                 soundEnabled = !soundEnabled;
                 soundButton.setAttribute('aria-pressed', String(soundEnabled));
@@ -347,6 +486,14 @@ export default {
 
         function onKeyDown(event) {
             if (event.altKey || event.ctrlKey || event.metaKey) return;
+            if (
+                (event.key === 'Enter' || event.key === ' ') &&
+                event.target instanceof Element &&
+                event.target.closest('button') &&
+                root.contains(event.target)
+            ) {
+                return;
+            }
             if (/^\d$/.test(event.key)) {
                 pressDigit(event.key);
                 event.preventDefault();
@@ -366,10 +513,15 @@ export default {
         root.addEventListener('click', onRootClick);
         document.addEventListener('keydown', onKeyDown);
         showDialing();
+        refreshRecents();
 
         return function cleanup() {
+            const saveMemory = CONNECTED_STATES.has(state);
             mounted = false;
-            clearRingTimer();
+            callProvider.dispose();
+            microphoneRequestId += 1;
+            finishActiveCapture({ save: saveMemory });
+            try { microphone.stop(); } catch (_) { /* optional cleanup */ }
             root.removeEventListener('click', onRootClick);
             document.removeEventListener('keydown', onKeyDown);
         };

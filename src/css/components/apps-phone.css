@@ -194,7 +194,7 @@
 .wos-phone-character {
     flex: 1;
     min-height: 0;
-    padding: 10px 8px 2px;
+    padding: 8px 8px 2px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -203,11 +203,11 @@
 }
 
 .wos-phone-character-emoji {
-    min-height: 112px;
+    min-height: 88px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 88px;
+    font-size: 76px;
     line-height: 1;
     filter: drop-shadow(0 7px 9px rgba(20, 24, 48, 0.18));
 }
@@ -222,11 +222,220 @@
 
 .wos-phone-character-message {
     max-width: 410px;
-    margin-top: 9px;
+    margin-top: 7px;
     color: var(--color-text-muted);
     font-size: 21px;
     font-weight: 650;
     line-height: 1.22;
+}
+
+.wos-phone-call-signal {
+    width: 100%;
+    max-width: 404px;
+    min-height: 88px;
+    margin-top: 12px;
+    padding: 9px 14px 10px;
+    border: 3px solid rgba(255, 255, 255, 0.30);
+    border-radius: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    column-gap: 14px;
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.16);
+}
+
+.wos-phone-call-signal[data-call-signal="off"] {
+    display: none;
+}
+
+.wos-phone-call-signal-heading {
+    min-width: 126px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.wos-phone-call-dot {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border: 4px solid rgba(255, 255, 255, 0.72);
+    border-radius: var(--radius-full);
+    background: #ffe37f;
+    box-shadow: 0 0 0 4px rgba(255, 227, 127, 0.14);
+}
+
+.wos-phone-call-label {
+    max-width: 170px;
+    color: var(--color-text);
+    font-size: 17px;
+    font-weight: 850;
+    line-height: 1.08;
+    text-align: left;
+}
+
+.wos-phone-wave {
+    width: 186px;
+    height: 52px;
+    padding: 5px 12px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(16, 24, 45, 0.24);
+    overflow: hidden;
+}
+
+.wos-phone-wave-bar {
+    --wave-level: 0.3;
+    width: 11px;
+    height: calc(10px + 31px * var(--wave-level));
+    min-height: 10px;
+    border-radius: var(--radius-full);
+    display: block;
+    background: linear-gradient(180deg, #fff7b4, #6ee6b0);
+    box-shadow: 0 0 8px rgba(110, 230, 176, 0.36);
+    transition: height 85ms ease-out;
+}
+
+.wos-phone-call-signal[data-call-signal="ringing"] {
+    border-color: rgba(255, 233, 142, 0.58);
+    background: rgba(255, 222, 111, 0.18);
+}
+
+.wos-phone-call-signal[data-call-signal="ringing"] .wos-phone-call-dot {
+    animation: wosPhoneCallDot 700ms ease-in-out infinite;
+}
+
+.wos-phone-call-signal[data-call-signal="ringing"] .wos-phone-wave-bar {
+    background: #ffe991;
+    animation: wosPhoneRingWave 740ms ease-in-out infinite alternate;
+}
+
+.wos-phone-call-signal[data-call-signal="ringing"] .wos-phone-wave-bar:nth-child(2n) {
+    animation-delay: -260ms;
+}
+
+.wos-phone-call-signal[data-call-signal^="connected"] {
+    border-color: rgba(124, 247, 171, 0.68);
+    background: linear-gradient(145deg, rgba(73, 208, 128, 0.30), rgba(84, 193, 176, 0.18));
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.22),
+        0 0 20px rgba(79, 222, 145, 0.16);
+}
+
+.wos-phone-call-signal[data-call-signal^="connected"] .wos-phone-call-dot {
+    background: #6cf09e;
+    box-shadow: 0 0 0 4px rgba(108, 240, 158, 0.16);
+}
+
+.wos-phone-call-signal[data-call-signal="connected-starting"] .wos-phone-wave-bar {
+    animation: wosPhoneListening 900ms ease-in-out infinite alternate;
+}
+
+.wos-phone-call-signal[data-call-signal="connected-starting"] .wos-phone-wave-bar:nth-child(2n) {
+    animation-delay: -360ms;
+}
+
+.wos-phone-call-signal[data-call-signal="connected-fallback"] .wos-phone-wave {
+    opacity: 0.44;
+}
+
+.wos-phone-call-signal[data-call-signal="connected-quiet"] .wos-phone-wave {
+    opacity: 0.64;
+}
+
+.wos-phone-mic-retry {
+    width: 100%;
+    min-height: 38px;
+    margin-top: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.34);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.22);
+    color: var(--color-text);
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.wos-phone-recents {
+    flex: 0 0 auto;
+    margin: 4px 4px 0;
+    padding-top: 7px;
+    border-top: 3px dashed rgba(255, 255, 255, 0.20);
+}
+
+.wos-phone-toy:not([data-state="dialing"]) .wos-phone-recents {
+    display: none;
+}
+
+.wos-phone-recents-title {
+    margin-bottom: 6px;
+    color: var(--color-text-muted);
+    font-size: 16px;
+    font-weight: 800;
+    text-align: left;
+}
+
+.wos-phone-recents-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 7px;
+}
+
+.wos-phone-recent {
+    min-width: 0;
+    height: 56px;
+    padding: 5px 7px;
+    border: 2px solid rgba(255, 255, 255, 0.24);
+    border-radius: 17px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.18);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.wos-phone-recent-emoji {
+    font-size: 26px;
+    line-height: 1;
+}
+
+.wos-phone-recent-label {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.05;
+    text-align: left;
+}
+
+.wos-phone-recent-play {
+    font-size: 16px;
+    color: #9ef6c0;
+}
+
+.wos-phone-recent:active,
+.wos-phone-recent.is-playing {
+    transform: translateY(2px);
+    background: rgba(112, 237, 148, 0.28);
+}
+
+.wos-phone-toy[data-state$="-connected"] {
+    border-color: rgba(152, 255, 190, 0.76);
+}
+
+.wos-phone-toy[data-state$="-connected"] .wos-phone-screen {
+    box-shadow:
+        inset 0 0 0 5px rgba(112, 237, 148, 0.23),
+        0 10px 18px rgba(20, 24, 48, 0.20),
+        0 0 28px rgba(75, 226, 139, 0.17);
 }
 
 .wos-phone-keypad {
@@ -312,6 +521,8 @@
 
 .wos-phone-sound:focus-visible,
 .wos-phone-favorite:focus-visible,
+.wos-phone-mic-retry:focus-visible,
+.wos-phone-recent:focus-visible,
 .wos-phone-key:focus-visible {
     outline: 5px solid #ffffff;
     outline-offset: 3px;
@@ -334,10 +545,27 @@
     65% { transform: translateX(8px); }
 }
 
+@keyframes wosPhoneCallDot {
+    0%, 100% { transform: scale(0.82); opacity: 0.72; }
+    50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes wosPhoneRingWave {
+    from { height: 14px; }
+    to { height: 38px; }
+}
+
+@keyframes wosPhoneListening {
+    from { height: 13px; opacity: 0.58; }
+    to { height: 28px; opacity: 0.96; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .wos-phone-toy[data-state="ringing"] .wos-phone-character-emoji,
     .wos-phone-character--arriving,
-    .wos-phone-needs-number .wos-phone-screen {
+    .wos-phone-needs-number .wos-phone-screen,
+    .wos-phone-call-signal .wos-phone-call-dot,
+    .wos-phone-call-signal .wos-phone-wave-bar {
         animation: none;
     }
 }

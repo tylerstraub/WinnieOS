@@ -1549,6 +1549,10 @@ const PHONE_DTMF_HZ = {
     '0': [941, 1336],
 };
 
+// Keep the clearer kiosk-speaker level local to Phone. The shared master
+// level, limiter, and soft clipper remain unchanged for every app.
+const PHONE_OUTPUT_BOOST = 1.18;
+
 /** Familiar dual-frequency keypad tone, softened for repeated toddler taps. */
 function playPhoneDigit(digit, strength = 0.4) {
     const c = ensureContext();
@@ -1565,7 +1569,8 @@ function playPhoneDigit(digit, strength = 0.4) {
         const gain = c.createGain();
         oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(frequency, t);
-        envGain(gain, t, 0.003, 0.085, 0.030 * (0.55 + 0.45 * s), 0.00001);
+        envGain(gain, t, 0.003, 0.085,
+            PHONE_OUTPUT_BOOST * 0.030 * (0.55 + 0.45 * s), 0.00001);
         oscillator.connect(gain);
         gain.connect(master);
         oscillator.start(t);
@@ -1589,7 +1594,8 @@ function playPhoneRing(strength = 0.45) {
             const gain = c.createGain();
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(frequency, start);
-            envGain(gain, start, 0.012, 0.32, 0.022 * (0.55 + 0.45 * s), 0.00001);
+            envGain(gain, start, 0.012, 0.32,
+                PHONE_OUTPUT_BOOST * 0.022 * (0.55 + 0.45 * s), 0.00001);
             oscillator.connect(gain);
             gain.connect(master);
             oscillator.start(start);
@@ -1613,7 +1619,8 @@ function playPhoneAnswer(strength = 0.45) {
         const gain = c.createGain();
         oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(frequency, start);
-        envGain(gain, start, 0.004, 0.24, 0.040 * (0.55 + 0.45 * s), 0.00001);
+        envGain(gain, start, 0.004, 0.24,
+            PHONE_OUTPUT_BOOST * 0.040 * (0.55 + 0.45 * s), 0.00001);
         oscillator.connect(gain);
         gain.connect(master);
         oscillator.start(start);
@@ -1636,11 +1643,45 @@ function playPhoneHangup(strength = 0.35) {
         const gain = c.createGain();
         oscillator.type = 'triangle';
         oscillator.frequency.setValueAtTime(frequency, start);
-        envGain(gain, start, 0.003, 0.18, 0.030 * (0.55 + 0.45 * s), 0.00001);
+        envGain(gain, start, 0.003, 0.18,
+            PHONE_OUTPUT_BOOST * 0.030 * (0.55 + 0.45 * s), 0.00001);
         oscillator.connect(gain);
         gain.connect(master);
         oscillator.start(start);
         oscillator.stop(start + 0.22);
+    });
+}
+
+/**
+ * Replays a local call memory through the same protected output graph as every
+ * WinnieOS cue. The encoded blob is decoded in memory and never leaves here.
+ */
+async function playLocalRecording(blob, strength = 0.45) {
+    const c = ensureContext();
+    if (!c || !master || !blob || typeof blob.arrayBuffer !== 'function') return false;
+    if (!(await unlock())) return false;
+
+    let buffer;
+    try {
+        const encoded = await blob.arrayBuffer();
+        buffer = await c.decodeAudioData(encoded.slice(0));
+    } catch (_) {
+        return false;
+    }
+
+    return new Promise((resolve) => {
+        const source = c.createBufferSource();
+        const gain = c.createGain();
+        gain.gain.value = 0.42 * (0.55 + 0.45 * clamp01(strength));
+        source.buffer = buffer;
+        source.connect(gain);
+        gain.connect(master);
+        source.onended = () => {
+            try { source.disconnect(); } catch (_) { /* optional cleanup */ }
+            try { gain.disconnect(); } catch (_) { /* optional cleanup */ }
+            resolve(true);
+        };
+        source.start();
     });
 }
 
@@ -1753,6 +1794,9 @@ export const Audio = {
     phoneRing:   function(strength)        { playPhoneRing(strength); },
     phoneAnswer: function(strength)        { playPhoneAnswer(strength); },
     phoneHangup: function(strength)        { playPhoneHangup(strength); },
+    playLocalRecording: function(blob, strength) {
+        return playLocalRecording(blob, strength);
+    },
 };
 
 // Attach to window namespace for shared reuse
@@ -1761,5 +1805,4 @@ if (typeof window !== 'undefined') {
     window.WinnieOS.Utils = window.WinnieOS.Utils || {};
     window.WinnieOS.Utils.Audio = Audio;
 }
-
 
