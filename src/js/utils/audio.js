@@ -58,6 +58,11 @@ const MIN_INTERVAL = {
     constellationReveal: 1.5,
     constellationName: 1.5,
     shootingStar: 0.15,
+    // Phone vocabulary: familiar, brief keypad/ringing/connection feedback.
+    phoneDigit: 0.035,
+    phoneRing: 0.45,
+    phoneAnswer: 0.35,
+    phoneHangup: 0.20,
 };
 
 function now() {
@@ -1531,6 +1536,114 @@ function playShootingStar(strength = 0.4) {
     });
 }
 
+const PHONE_DTMF_HZ = {
+    '1': [697, 1209],
+    '2': [697, 1336],
+    '3': [697, 1477],
+    '4': [770, 1209],
+    '5': [770, 1336],
+    '6': [770, 1477],
+    '7': [852, 1209],
+    '8': [852, 1336],
+    '9': [852, 1477],
+    '0': [941, 1336],
+};
+
+/** Familiar dual-frequency keypad tone, softened for repeated toddler taps. */
+function playPhoneDigit(digit, strength = 0.4) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('phoneDigit')) return;
+
+    const frequencies = PHONE_DTMF_HZ[String(digit)];
+    if (!frequencies) return;
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    frequencies.forEach((frequency) => {
+        const oscillator = c.createOscillator();
+        const gain = c.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, t);
+        envGain(gain, t, 0.003, 0.085, 0.030 * (0.55 + 0.45 * s), 0.00001);
+        oscillator.connect(gain);
+        gain.connect(master);
+        oscillator.start(t);
+        oscillator.stop(t + 0.10);
+    });
+}
+
+/** Gentle North-American-style ringback chord in two short pulses. */
+function playPhoneRing(strength = 0.45) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('phoneRing')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    [0, 0.52].forEach((offset) => {
+        const start = t + offset;
+        [440, 480].forEach((frequency) => {
+            const oscillator = c.createOscillator();
+            const gain = c.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, start);
+            envGain(gain, start, 0.012, 0.32, 0.022 * (0.55 + 0.45 * s), 0.00001);
+            oscillator.connect(gain);
+            gain.connect(master);
+            oscillator.start(start);
+            oscillator.stop(start + 0.36);
+        });
+    });
+}
+
+/** Warm ascending connection cue: clear feedback without imitating speech. */
+function playPhoneAnswer(strength = 0.45) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('phoneAnswer')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    [392, 523.25, 659.25].forEach((frequency, index) => {
+        const start = t + index * 0.075;
+        const oscillator = c.createOscillator();
+        const gain = c.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, start);
+        envGain(gain, start, 0.004, 0.24, 0.040 * (0.55 + 0.45 * s), 0.00001);
+        oscillator.connect(gain);
+        gain.connect(master);
+        oscillator.start(start);
+        oscillator.stop(start + 0.28);
+    });
+}
+
+/** Soft descending goodbye cue for ending any pretend call. */
+function playPhoneHangup(strength = 0.35) {
+    const c = ensureContext();
+    if (!c || !master) return;
+    if (!shouldPlay('phoneHangup')) return;
+
+    const s = clamp01(strength);
+    const t = c.currentTime;
+
+    [440, 293.66].forEach((frequency, index) => {
+        const start = t + index * 0.085;
+        const oscillator = c.createOscillator();
+        const gain = c.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, start);
+        envGain(gain, start, 0.003, 0.18, 0.030 * (0.55 + 0.45 * s), 0.00001);
+        oscillator.connect(gain);
+        gain.connect(master);
+        oscillator.start(start);
+        oscillator.stop(start + 0.22);
+    });
+}
+
 export const Audio = {
     ensure: function() {
         return !!ensureContext();
@@ -1635,6 +1748,11 @@ export const Audio = {
     constellationReveal:   function(strength)   { playConstellationReveal(strength); },
     constellationName:     function(strength)   { playConstellationName(strength); },
     shootingStar:          function(strength)   { playShootingStar(strength); },
+    // Phone sound vocabulary
+    phoneDigit:  function(digit, strength) { playPhoneDigit(digit, strength); },
+    phoneRing:   function(strength)        { playPhoneRing(strength); },
+    phoneAnswer: function(strength)        { playPhoneAnswer(strength); },
+    phoneHangup: function(strength)        { playPhoneHangup(strength); },
 };
 
 // Attach to window namespace for shared reuse
