@@ -10,6 +10,18 @@ function getDefaultMediaDevices() {
     return navigator.mediaDevices || null;
 }
 
+function getDefaultLocation() {
+    if (typeof window === 'undefined') return null;
+    return window.location;
+}
+
+function isLocalKioskOrigin(locationRef) {
+    if (!locationRef || locationRef.protocol !== 'http:') return false;
+    const hostname = String(locationRef.hostname || '').toLowerCase();
+    return hostname === 'localhost' || hostname === '127.0.0.1' ||
+        hostname === '[::1]' || hostname === '::1';
+}
+
 function getDefaultRequestFrame() {
     if (typeof requestAnimationFrame === 'function') return requestAnimationFrame;
     return (callback) => setTimeout(callback, 16);
@@ -29,6 +41,7 @@ function getDefaultCancelFrame() {
  */
 export function createLocalCallMicrophone({
     mediaDevices = getDefaultMediaDevices(),
+    locationRef = getDefaultLocation(),
     AudioContextCtor = getDefaultAudioContext(),
     requestFrame = getDefaultRequestFrame(),
     cancelFrame = getDefaultCancelFrame()
@@ -66,6 +79,9 @@ export function createLocalCallMicrophone({
         stop();
         const startGeneration = generation;
 
+        if (!isLocalKioskOrigin(locationRef)) {
+            return { ok: false, reason: 'unavailable' };
+        }
         if (!mediaDevices || typeof mediaDevices.getUserMedia !== 'function') {
             return { ok: false, reason: 'unavailable' };
         }
