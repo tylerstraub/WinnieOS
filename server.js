@@ -147,26 +147,34 @@ app.use((req, res) => {
 });
 
 // Start server
-// If host is localhost, bind to all interfaces (both IPv4 and IPv6) to ensure Chrome can connect
-const listenHost = config.server.host === 'localhost' ? undefined : config.server.host;
-const server = app.listen(config.server.port, listenHost, () => {
-  logger.info(`WinnieOS Server started on http://${config.server.host}:${config.server.port}`);
+// Listen on both loopback families for the kiosk without exposing the app on
+// LAN interfaces. Other configured hosts retain their explicit binding.
+const listenHosts = config.server.host === 'localhost'
+  ? ['127.0.0.1', '::1']
+  : [config.server.host];
+const servers = listenHosts.map((host) => app.listen(config.server.port, host, () => {
+  logger.info(`WinnieOS Server started on http://${host}:${config.server.port}`);
   logger.info(`Serving files from: ${distPath}`);
-});
+}));
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
-  });
+  closeServers();
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
-  server.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
-  });
+  closeServers();
 });
+
+function closeServers() {
+  let remaining = servers.length;
+  for (const server of servers) {
+    server.close(() => {
+      if (--remaining !== 0) return;
+      logger.info('Server closed');
+      process.exit(0);
+    });
+  }
+}
