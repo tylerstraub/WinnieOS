@@ -87,9 +87,9 @@ Keys:
 
 ### Kiosk (primary)
 
-systemd-managed. The reference unit at `deploy/winnieos-server.service` runs `node server.js` as the `winnieos` user out of `/home/winnieos/app`. Chromium launches in `--kiosk` mode (configured by the display environment) and points at `http://localhost:3000`.
+systemd-managed. The reference unit at `deploy/winnieos-server.service` runs `node server.js` as the `winnieos` user out of `/home/winnieos/app`. It makes the checkout read-only to the server except for the pre-existing `logs/` directory. The default `localhost` setting binds the server to both loopback addresses, not LAN interfaces. Chromium launches in `--kiosk` mode (configured by the display environment) and points at `http://localhost:3000`.
 
-Updates are pulled by a timer on the device (outside this repo): it fetches `origin/master`, `git reset --hard`s, runs `npm ci` and `npm run build` if anything changed, then restarts the service. Already-loaded pages detect the new build via the `/healthz` SHA poll (`src/js/utils/health-poll.js`) and reload themselves, so Chromium stays running across deploys with no visible flash.
+Updates are pulled by a timer on the device (outside this repo): it fetches `origin/master`, `git reset --hard`s, runs `npm ci` if the lockfile changed, runs `npm run build`, then restarts the service. Already-loaded pages detect the new build via the `/healthz` SHA poll (`src/js/utils/health-poll.js`) and reload themselves, so Chromium stays running across deploys with no visible flash.
 
 ### GitHub Pages (preview)
 

@@ -11,6 +11,11 @@ WorkingDirectory=/home/winnieos/app
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/home/winnieos/app/logs
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target
