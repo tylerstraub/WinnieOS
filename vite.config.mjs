@@ -47,7 +47,7 @@ export default {
   ],
   server: {
     port: config.server.port,
-    host: config.server.host === 'localhost' ? true : config.server.host,
+    host: config.server.host,
     strictPort: false,
   },
   build: {

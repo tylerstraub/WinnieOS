@@ -6,30 +6,9 @@
     <title>WinnieOS</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%92%3C/text%3E%3C/svg%3E">
 
-    <style>
-        /* ============================================
-           WINNIEOS FOUNDATION PRINCIPLES
-
-           DEFAULT REFERENCE RESOLUTION: 1280x800 (16:10 aspect ratio)
-           - All UI is designed in a single "virtual computer" coordinate system (reference resolution)
-           - By default that coordinate system is 1280x800, but it may be changed via WinnieOS.Display
-           - The entire application scales uniformly from the active reference resolution (no responsive reflow)
-
-           DOCUMENTATION:
-           - See README.md for principles and architecture
-           - See DAD.md to add a new app
-           - See CLAUDE.md for AI-agent grounding context
-           ============================================ */
-
-        /* Pre-bundle paint: keep the page on-brand from the very first frame
-           so the StartupScreen swap is invisible. Without this the browser
-           shows white + default-styled fallback text until the bundled CSS
-           arrives. Values mirror tokens.css --color-primary/--color-secondary. */
-        html, body { margin: 0; height: 100%; background: #667eea; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    </style>
-  <script type="module" crossorigin src="/assets/index-CIIYxA4a.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-B9zUUdr-.css">
+    <style>html,body{background:#667eea;height:100%;margin:0}body{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}</style>
+  <script type="module" crossorigin src="/assets/index-BxUns8f7.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DOFf2SeH.css">
 </head>
 <body>
     <div id="winnieos-canvas"></div>

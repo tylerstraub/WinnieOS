@@ -85,7 +85,7 @@ Apps are auto-discovered by Vite. See `DAD.md` for the full guide, including the
 | Config system | `lib/config-loader.js`, `config/default.json` |
 | Core initialization | `src/js/core/index.js` |
 | How apps are discovered | `src/js/apps/index.js` |
-| Pages vs kiosk build | `vite.config.js`, `.github/workflows/pages.yml` |
+| Pages vs kiosk build | `vite.config.mjs`, `.github/workflows/pages.yml` |
 
 ## Conventions
 

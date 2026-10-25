@@ -12,7 +12,7 @@ on:
       - '!src/**/__tests__/**'
       - 'public/**'
       - 'index.html'
-      - 'vite.config.js'
+      - 'vite.config.mjs'
       - 'config/default.json'
       - 'lib/config-loader.js'
       - '!lib/__tests__/**'

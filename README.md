@@ -53,8 +53,8 @@ WinnieOS/
 │   └── winnieos-server.service     # reference systemd unit
 ├── .github/workflows/pages.yml     # GitHub Pages build + deploy
 ├── server.js                       # Express static server
-├── vite.config.js
-├── vitest.config.js
+├── vite.config.mjs
+├── vitest.config.mjs
 ├── package.json
 ├── DAD.md                          # practical guide to adding apps
 └── CLAUDE.md                       # grounding context for AI-agent sessions
@@ -75,7 +75,7 @@ Commit `dist/` with your changes — production serves the committed build.
 
 ## Configuration
 
-`config/default.json` is the source of truth. `config/local.json` (gitignored) overrides it via deep merge — the same shared loader is used by both `server.js` and `vite.config.js`. The frontend fetches a safe subset at `/winnieos-config.json`.
+`config/default.json` is the source of truth. `config/local.json` (gitignored) overrides it via deep merge — the same shared loader is used by both `server.js` and `vite.config.mjs`. The frontend fetches a safe subset at `/winnieos-config.json`.
 
 Keys:
 - `server.port` / `server.host`
