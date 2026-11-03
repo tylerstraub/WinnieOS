@@ -47,6 +47,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Run tests
+        run: npm test -- --run
+
       - name: Build for Pages subpath
         run: npm run build
         env:
