@@ -1,0 +1,31 @@
+{
+  "BrowserGuestModeEnabled": false,
+  "BrowserAddPersonEnabled": false,
+  "IncognitoModeAvailability": 1,
+  "DeveloperToolsAvailability": 2,
+  "AllowFileSelectionDialogs": false,
+  "DownloadRestrictions": 3,
+  "PrintingEnabled": false,
+  "DefaultSearchProviderEnabled": false,
+  "SearchSuggestEnabled": false,
+  "URLBlocklist": [
+    "*",
+    "chrome://settings",
+    "chrome://extensions",
+    "chrome://flags",
+    "chrome://inspect",
+    "chrome://downloads",
+    "chrome://history",
+    "file://*",
+    "view-source:*",
+    "javascript:*"
+  ],
+  "URLAllowlist": [
+    "http://.localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://[::1]:3000",
+    "https://.tylerstraub.github.io/floor-zero/",
+    "chrome://policy",
+    "about:blank"
+  ]
+}

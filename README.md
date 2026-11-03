@@ -91,6 +91,14 @@ systemd-managed. The reference unit at `deploy/winnieos-server.service` runs `no
 
 Updates are pulled by a timer on the device (outside this repo): it fetches `origin/master`, `git reset --hard`s, runs `npm ci` if the lockfile changed, runs `npm run build`, then restarts the service. Already-loaded pages detect the new build via the `/healthz` SHA poll (`src/js/utils/health-poll.js`) and reload themselves, so Chromium stays running across deploys with no visible flash.
 
+### Kiosk input and browser restrictions
+
+Page JavaScript and Chromium's `--kiosk` flag are not a keyboard security boundary. The dedicated Sway session includes `/etc/sway/winnieos-shortcuts.conf`, using `deploy/winnieos-shortcuts.conf` as its reference. It intercepts browser menus, new windows/tabs, address/search bars, developer tools, file dialogs, fullscreen toggles, and window-close commands before they reach Chromium or an embedded app. Normal typing, arrows, and Ctrl+A/C/V/X/Z/Y remain available. Include only the distro's `/etc/sway/config.d/50-systemd-user.conf` for the user-service environment handoff; do not import the normal desktop bindings into the kiosk session.
+
+`deploy/chromium-kiosk-policy.json` is the reference for the root-owned `/etc/chromium/policies/managed/20-winnieos-kiosk.json`. It denies general navigation, allowing loopback port 3000, the existing Space app's `/floor-zero/` path, and read-only `chrome://policy` diagnostics. It also disables guest/incognito/new profiles, developer tools, file selection, downloads, printing, and default web search. The separate local microphone policy is intentionally not overwritten, and browser profile data/IndexedDB are preserved.
+
+These host files are **not installed by the application update timer**: back up the active files, install them as root, validate Sway's config, and restart the graphical kiosk session during maintenance. Verify the actual browser's `chrome://policy` status and test keyboard escapes after installation. For rollback, restore the backed-up Sway configuration and remove or restore only the added kiosk policy, then restart the session. Browser URL policies are navigation controls, not an OS sandbox or network firewall; physical boot access and administrator access are outside this boundary. New remote apps need a deliberate allowlist review.
+
 ### GitHub Pages (preview)
 
 The same source builds for static hosting via `.github/workflows/pages.yml` on every push to `master`. The two builds differ only in their Vite `base` — kiosk uses `/`, Pages uses `/WinnieOS/` — and the Express runtime endpoints are mirrored as static files where applicable: `/winnieos-config.json` is emitted at build time so Pages serves the same shape, and `/healthz` simply doesn't exist on Pages (the client poll abandons silently by design).
